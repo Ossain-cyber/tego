@@ -6,12 +6,33 @@
   <title>Tego Test</title>
 </head>
 <body>
-  <h1>Test Page</h1>
-  <p id="test-result">JavaScript is not running</p>
+  <h1>Supabase Test</h1>
+  <p id="test-result">Loading...</p>
   
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    document.getElementById('test-result').textContent = 'JavaScript is running!';
-    document.getElementById('test-result').style.color = 'green';
+    setTimeout(() => {
+      const result = document.getElementById('test-result');
+      
+      if (typeof window.supabase === 'undefined') {
+        result.textContent = 'Supabase library NOT loaded';
+        result.style.color = 'red';
+      } else {
+        result.textContent = 'Supabase library loaded successfully';
+        result.style.color = 'green';
+        
+        try {
+          const supabase = window.supabase.createClient(
+            'https://wepbechfempjhabhzbyk.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcGJlY2hmZW1wamhhYmh6YnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzc5NTksImV4cCI6MjEwMjgxMzk1OX0.msTHVjOeJBEdzr6vguP9fXiIHUxQbXHCG3X8M-hCl6c'
+          );
+          result.textContent += ' | Client created';
+        } catch (err) {
+          result.textContent = 'Error: ' + err.message;
+          result.style.color = 'red';
+        }
+      }
+    }, 3000);
   </script>
 </body>
-  </html>
+</html>
