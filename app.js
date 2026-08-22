@@ -1,35 +1,30 @@
 const SUPABASE_URL = 'https://wepbechfempjhabhzbyk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcGJlY2hmZW1wamhhYmh6YnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzc5NTksImV4cCI6MjEwMjgxMzk1OX0.msTHVjOeJBEdzr6vguP9fXiIHUxQbXHCG3X8M-hCl6c';
 
-let supabase;
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let currentUser = null;
 let currentProfile = null;
 let currentChat = null;
 let realtimeChannel = null;
 let deferredInstallPrompt = null;
 
-function showFatalError(message) {
-  document.getElementById('loading').innerHTML = `
-    <div style="text-align:center;padding:20px;">
-      <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
-      <h3 style="margin-bottom:8px;">Something went wrong</h3>
-      <p style="color:#EF4444;font-size:14px;margin-bottom:16px;">${message}</p>
-      <button onclick="location.reload()" style="padding:12px 24px;background:#2563EB;color:white;border:none;border-radius:8px;font-size:16px;">Retry</button>
-    </div>
-  `;
-}
-
 function generateTegoId() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `TEGO-${part1}-${part2}`;
+  return 'TEGO-' + part1 + '-' + part2;
 }
 
 function showScreen(screenId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const screens = document.querySelectorAll('.screen');
+  for (let i = 0; i < screens.length; i++) {
+    screens[i].classList.remove('active');
+  }
   const screen = document.getElementById(screenId);
-  if (screen) screen.classList.add('active');
+  if (screen) {
+    screen.classList.add('active');
+  }
 }
 
 function showToast(message) {
@@ -42,15 +37,9 @@ function showToast(message) {
   }
   toast.textContent = message;
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-function showAuthError(message) {
-  const errorEl = document.getElementById('auth-error');
-  if (errorEl) {
-    errorEl.textContent = message;
-    errorEl.classList.add('show');
-  }
+  setTimeout(function() {
+    toast.classList.remove('show');
+  }, 3000);
 }
 
 function getInitials(name) {
@@ -65,14 +54,14 @@ function formatTime(timestamp) {
   const diff = now - date;
   
   if (diff < 60000) return 'now';
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+  if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
   if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  if (diff < 604800000) return date.toLocaleDateString([], { weekday: 'short' });
   return date.toLocaleDateString();
 }
 
 function renderAuth() {
   document.getElementById('loading').style.display = 'none';
+  
   const app = document.getElementById('app');
   app.innerHTML = `
     <div id="auth-screen" class="screen auth-screen active">
@@ -83,58 +72,37 @@ function renderAuth() {
           <p>Simple. Fast. Private.</p>
         </div>
         <div class="auth-error" id="auth-error"></div>
-        <div id="auth-forms">
-          <div id="login-form">
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
-            </div>
-            <div class="form-group">
-              <label>Password</label>
-              <input type="password" id="login-password" placeholder="Your password" autocomplete="current-password">
-            </div>
-            <button class="btn btn-primary" id="login-btn">Login</button>
-            <div class="auth-link">
-              Don't have an account? <a href="#" id="show-signup">Sign up</a>
-            </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="login-password" placeholder="Your password">
+        </div>
+        <button class="btn btn-primary" id="login-btn">Login</button>
+        <div class="auth-link">
+          Need an account? <a href="#" id="show-signup">Sign up</a>
+        </div>
+        <div id="signup-fields" style="display:none;">
+          <div class="form-group" style="margin-top:16px;">
+            <label>Username</label>
+            <input type="text" id="signup-username" placeholder="username">
           </div>
-          <div id="signup-form" style="display:none;">
-            <div class="form-group">
-              <label>Username</label>
-              <input type="text" id="signup-username" placeholder="username" autocomplete="off">
-            </div>
-            <div class="form-group">
-              <label>Email</label>
-              <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
-            </div>
-            <div class="form-group">
-              <label>Password</label>
-              <input type="password" id="signup-password" placeholder="Create a password" autocomplete="new-password">
-            </div>
-            <div class="form-group">
-              <label>Display Name</label>
-              <input type="text" id="signup-display-name" placeholder="Your name" autocomplete="off">
-            </div>
-            <button class="btn btn-primary" id="signup-btn">Create Account</button>
-            <div class="auth-link">
-              Already have an account? <a href="#" id="show-login">Login</a>
-            </div>
+          <div class="form-group">
+            <label>Display Name</label>
+            <input type="text" id="signup-display-name" placeholder="Your name">
           </div>
+          <button class="btn btn-primary" id="signup-btn">Create Account</button>
         </div>
       </div>
     </div>
   `;
   
-  document.getElementById('show-signup').addEventListener('click', (e) => {
+  document.getElementById('show-signup').addEventListener('click', function(e) {
     e.preventDefault();
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('signup-form').style.display = 'block';
-  });
-  
-  document.getElementById('show-login').addEventListener('click', (e) => {
-    e.preventDefault();
-    document.getElementById('signup-form').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
+    const signupFields = document.getElementById('signup-fields');
+    signupFields.style.display = signupFields.style.display === 'none' ? 'block' : 'none';
   });
   
   document.getElementById('login-btn').addEventListener('click', handleLogin);
@@ -144,9 +112,11 @@ function renderAuth() {
 async function handleLogin() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
+  const errorEl = document.getElementById('auth-error');
   
   if (!email || !password) {
-    showAuthError('Please enter email and password');
+    errorEl.textContent = 'Please enter email and password';
+    errorEl.classList.add('show');
     return;
   }
   
@@ -154,78 +124,72 @@ async function handleLogin() {
   btn.disabled = true;
   btn.textContent = 'Logging in...';
   
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (error) {
-      showAuthError(error.message);
-      btn.disabled = false;
-      btn.textContent = 'Login';
-    }
-  } catch (err) {
-    showAuthError('Connection failed. Check your internet connection.');
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
+  
+  if (error) {
+    errorEl.textContent = error.message;
+    errorEl.classList.add('show');
     btn.disabled = false;
     btn.textContent = 'Login';
   }
 }
 
 async function handleSignup() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
   const username = document.getElementById('signup-username').value.trim().toLowerCase();
-  const email = document.getElementById('signup-email').value.trim();
-  const password = document.getElementById('signup-password').value;
   const displayName = document.getElementById('signup-display-name').value.trim();
+  const errorEl = document.getElementById('auth-error');
   
-  if (!username || !email || !password) {
-    showAuthError('Please fill in all required fields');
-    return;
-  }
-  
-  if (username.length < 3) {
-    showAuthError('Username must be at least 3 characters');
+  if (!email || !password || !username) {
+    errorEl.textContent = 'Please fill in all fields';
+    errorEl.classList.add('show');
     return;
   }
   
   const btn = document.getElementById('signup-btn');
   btn.disabled = true;
-  btn.textContent = 'Creating account...';
+  btn.textContent = 'Creating...';
   
-  try {
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-    
-    if (authError) {
-      showAuthError(authError.message);
-      btn.disabled = false;
-      btn.textContent = 'Create Account';
-      return;
-    }
-    
-    if (authData.user) {
-      const tegoId = generateTegoId();
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          auth_id: authData.user.id,
-          username,
-          tego_id: tegoId,
-          display_name: displayName || username
-        });
-      
-      if (profileError) {
-        showAuthError(profileError.message);
-        btn.disabled = false;
-        btn.textContent = 'Create Account';
-      }
-    }
-  } catch (err) {
-    showAuthError('Connection failed. Check your internet connection.');
+  const { data: authData, error: authError } = await supabase.auth.signUp({ email: email, password: password });
+  
+  if (authError) {
+    errorEl.textContent = authError.message;
+    errorEl.classList.add('show');
     btn.disabled = false;
     btn.textContent = 'Create Account';
+    return;
+  }
+  
+  if (authData.user) {
+    const tegoId = generateTegoId();
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        auth_id: authData.user.id,
+        username: username,
+        tego_id: tegoId,
+        display_name: displayName || username
+      });
+    
+    if (profileError) {
+      errorEl.textContent = profileError.message;
+      errorEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
   }
 }
 
 function renderMainApp() {
   document.getElementById('loading').style.display = 'none';
+  
   const app = document.getElementById('app');
+  const displayName = currentProfile ? currentProfile.display_name : 'User';
+  const username = currentProfile ? currentProfile.username : '';
+  const tegoId = currentProfile ? currentProfile.tego_id : '';
+  const avatarUrl = currentProfile ? currentProfile.avatar_url : '';
+  
   app.innerHTML = `
     <div id="install-banner" class="install-banner">
       <span>Install Tego</span>
@@ -235,9 +199,7 @@ function renderMainApp() {
     <div id="chats-screen" class="screen active">
       <div class="main-header">
         <h2>Tego</h2>
-        <div class="header-avatar" id="header-avatar">
-          ${currentProfile?.avatar_url ? `<img src="${currentProfile.avatar_url}" alt="Profile">` : getInitials(currentProfile?.display_name)}
-        </div>
+        <div class="header-avatar" id="header-avatar">${getInitials(displayName)}</div>
       </div>
       <div class="chat-list" id="chat-list"></div>
     </div>
@@ -247,7 +209,7 @@ function renderMainApp() {
         <h2>Contacts</h2>
       </div>
       <div class="contacts-search">
-        <input type="text" id="contact-search" placeholder="Search by username or Tego ID">
+        <input type="text" id="contact-search" placeholder="Search username or Tego ID">
         <div class="search-results" id="search-results"></div>
       </div>
       <div class="contacts-list" id="contacts-list"></div>
@@ -259,12 +221,10 @@ function renderMainApp() {
       </div>
       <div class="profile-screen">
         <div class="profile-header">
-          <div class="profile-avatar">
-            ${currentProfile?.avatar_url ? `<img src="${currentProfile.avatar_url}" alt="Profile">` : getInitials(currentProfile?.display_name)}
-          </div>
-          <div class="profile-name">${currentProfile?.display_name || 'User'}</div>
-          <div class="profile-username">@${currentProfile?.username || 'username'}</div>
-          <div class="profile-tego-id">${currentProfile?.tego_id || ''}</div>
+          <div class="profile-avatar">${getInitials(displayName)}</div>
+          <div class="profile-name">${displayName}</div>
+          <div class="profile-username">@${username}</div>
+          <div class="profile-tego-id">${tegoId}</div>
         </div>
         <div class="profile-actions">
           <div class="profile-action" id="logout-btn">
@@ -272,7 +232,7 @@ function renderMainApp() {
           </div>
         </div>
         <div style="text-align:center;margin-top:32px;color:#6B7280;font-size:12px;">
-          Need help? Contact rabbibrandsend@gmail.com
+          Contact: rabbibrandsend@gmail.com
         </div>
       </div>
     </div>
@@ -305,32 +265,37 @@ function renderMainApp() {
     </div>
   `;
   
-  document.getElementById('header-avatar').addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    document.querySelector('[data-screen="profile-screen"]').classList.add('active');
+  document.getElementById('header-avatar').addEventListener('click', function() {
+    const navItems = document.querySelectorAll('.nav-item');
+    for (let i = 0; i < navItems.length; i++) navItems[i].classList.remove('active');
+    navItems[2].classList.add('active');
     showScreen('profile-screen');
   });
   
   document.getElementById('logout-btn').addEventListener('click', handleLogout);
   
-  document.getElementById('back-btn').addEventListener('click', () => {
+  document.getElementById('back-btn').addEventListener('click', function() {
     showScreen('chats-screen');
-    document.getElementById('bottom-nav').style.display = 'flex';
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) bottomNav.style.display = 'flex';
   });
   
   document.getElementById('send-btn').addEventListener('click', sendMessage);
-  document.getElementById('chat-input').addEventListener('keypress', (e) => {
+  
+  document.getElementById('chat-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') sendMessage();
   });
+  
   document.getElementById('contact-search').addEventListener('input', searchContacts);
   
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.addEventListener('click', () => {
-      document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-      item.classList.add('active');
-      showScreen(item.dataset.screen);
+  const navItems = document.querySelectorAll('.nav-item');
+  for (let i = 0; i < navItems.length; i++) {
+    navItems[i].addEventListener('click', function() {
+      for (let j = 0; j < navItems.length; j++) navItems[j].classList.remove('active');
+      navItems[i].classList.add('active');
+      showScreen(navItems[i].getAttribute('data-screen'));
     });
-  });
+  }
   
   loadChats();
   loadContacts();
@@ -343,7 +308,7 @@ async function loadChats() {
   if (!chatList) return;
   
   chatList.innerHTML = `
-    <div class="chat-item" data-chat="saved">
+    <div class="chat-item" id="saved-chat">
       <div class="chat-avatar saved">📝</div>
       <div class="chat-info">
         <div class="chat-name">Saved Messages</div>
@@ -352,37 +317,42 @@ async function loadChats() {
     </div>
   `;
   
-  chatList.querySelector('[data-chat="saved"]').addEventListener('click', openSavedMessages);
+  document.getElementById('saved-chat').addEventListener('click', openSavedMessages);
   
   try {
     const { data: messages, error } = await supabase
       .from('messages')
       .select('*')
-      .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+      .or('sender_id.eq.' + currentUser.id + ',receiver_id.eq.' + currentUser.id)
       .order('created_at', { ascending: false })
       .limit(50);
     
     if (messages && messages.length > 0) {
-      const chatMap = new Map();
+      const chatMap = {};
       
-      messages.forEach(msg => {
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
         const isSender = msg.sender_id === currentUser.id;
         const otherId = isSender ? msg.receiver_id : msg.sender_id;
         const otherTegoId = isSender ? msg.receiver_tego_id : msg.sender_tego_id;
         
-        if (otherId !== currentUser.id && !chatMap.has(otherId)) {
-          chatMap.set(otherId, {
+        if (otherId !== currentUser.id && !chatMap[otherId]) {
+          chatMap[otherId] = {
             id: otherId,
             tegoId: otherTegoId,
             lastMessage: msg.message,
             timestamp: msg.created_at,
-            status: msg.status,
-            isSender
-          });
+            status: msg.status
+          };
         }
-      });
+      }
       
-      for (const [id, chat] of chatMap) {
+      const chatIds = Object.keys(chatMap);
+      
+      for (let i = 0; i < chatIds.length; i++) {
+        const id = chatIds[i];
+        const chat = chatMap[id];
+        
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name, username, tego_id, avatar_url')
@@ -394,19 +364,25 @@ async function loadChats() {
         chatItem.innerHTML = `
           <div class="chat-avatar">${profile ? getInitials(profile.display_name) : '?'}</div>
           <div class="chat-info">
-            <div class="chat-name">${profile?.display_name || chat.tegoId}</div>
+            <div class="chat-name">${profile ? profile.display_name : chat.tegoId}</div>
             <div class="chat-preview">${chat.lastMessage || ''}</div>
           </div>
           <div class="chat-meta">
             <div class="chat-time">${formatTime(chat.timestamp)}</div>
           </div>
         `;
-        chatItem.addEventListener('click', () => openChat(id, profile));
+        
+        (function(otherId, profileData) {
+          chatItem.addEventListener('click', function() {
+            openChat(otherId, profileData);
+          });
+        })(id, profile);
+        
         chatList.appendChild(chatItem);
       }
     }
   } catch (err) {
-    console.log('Error loading chats:', err);
+    console.log('Chats error:', err);
   }
 }
 
@@ -421,21 +397,27 @@ async function loadContacts() {
       .eq('owner_id', currentUser.id);
     
     if (contacts && contacts.length > 0) {
-      contactsList.innerHTML = contacts.map(contact => `
-        <div class="contact-item" data-tego-id="${contact.contact_tego_id}">
-          <div class="chat-avatar">${getInitials(contact.nickname || contact.contact_username)}</div>
-          <div class="contact-info">
-            <div class="contact-name">${contact.nickname || contact.contact_username}</div>
-            <div class="contact-username">${contact.contact_tego_id}</div>
+      let html = '';
+      for (let i = 0; i < contacts.length; i++) {
+        const contact = contacts[i];
+        html += `
+          <div class="contact-item" data-tego-id="${contact.contact_tego_id}">
+            <div class="chat-avatar">${getInitials(contact.nickname || contact.contact_username)}</div>
+            <div class="contact-info">
+              <div class="contact-name">${contact.nickname || contact.contact_username}</div>
+              <div class="contact-username">${contact.contact_tego_id}</div>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }
+      contactsList.innerHTML = html;
       
-      contactsList.querySelectorAll('.contact-item').forEach(item => {
-        item.addEventListener('click', () => {
-          openChatByTegoId(item.dataset.tegoId);
+      const items = contactsList.querySelectorAll('.contact-item');
+      for (let i = 0; i < items.length; i++) {
+        items[i].addEventListener('click', function() {
+          openChatByTegoId(items[i].getAttribute('data-tego-id'));
         });
-      });
+      }
     } else {
       contactsList.innerHTML = `
         <div class="empty-state">
@@ -446,7 +428,7 @@ async function loadContacts() {
       `;
     }
   } catch (err) {
-    console.log('Error loading contacts:', err);
+    console.log('Contacts error:', err);
   }
 }
 
@@ -463,30 +445,29 @@ async function searchContacts() {
     const { data: results, error } = await supabase.rpc('search_profiles', { search: query });
     
     if (results && results.length > 0) {
-      resultsDiv.innerHTML = results.map(profile => `
-        <div class="search-result">
-          <div class="chat-avatar">${getInitials(profile.display_name || profile.username)}</div>
-          <div class="contact-info">
-            <div class="contact-name">${profile.display_name || profile.username}</div>
-            <div class="contact-username">@${profile.username} · ${profile.tego_id}</div>
+      let html = '';
+      for (let i = 0; i < results.length; i++) {
+        const profile = results[i];
+        html += `
+          <div class="search-result">
+            <div class="chat-avatar">${getInitials(profile.display_name || profile.username)}</div>
+            <div class="contact-info">
+              <div class="contact-name">${profile.display_name || profile.username}</div>
+              <div class="contact-username">@${profile.username} · ${profile.tego_id}</div>
+            </div>
+            <button class="add-contact-btn" data-tego-id="${profile.tego_id}" data-username="${profile.username}">Add</button>
           </div>
-          <button class="add-contact-btn" data-tego-id="${profile.tego_id}" data-username="${profile.username}">Add</button>
-        </div>
-      `).join('');
+        `;
+      }
+      resultsDiv.innerHTML = html;
       
-      resultsDiv.querySelectorAll('.add-contact-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+      const addButtons = resultsDiv.querySelectorAll('.add-contact-btn');
+      for (let i = 0; i < addButtons.length; i++) {
+        addButtons[i].addEventListener('click', function(e) {
           e.stopPropagation();
-          await addContact(btn.dataset.tegoId, btn.dataset.username);
+          addContact(addButtons[i].getAttribute('data-tego-id'), addButtons[i].getAttribute('data-username'));
         });
-      });
-      
-      resultsDiv.querySelectorAll('.search-result').forEach(item => {
-        item.addEventListener('click', () => {
-          const tegoId = item.querySelector('.add-contact-btn').dataset.tegoId;
-          openChatByTegoId(tegoId);
-        });
-      });
+      }
     } else {
       resultsDiv.innerHTML = '<div class="empty-state"><p>No results found</p></div>';
     }
@@ -519,14 +500,15 @@ async function addContact(tegoId, username) {
 function openChat(otherId, profile) {
   currentChat = {
     id: otherId,
-    profile
+    profile: profile
   };
   
-  document.getElementById('chat-header-name').textContent = profile?.display_name || profile?.username || 'Chat';
+  document.getElementById('chat-header-name').textContent = profile && profile.display_name ? profile.display_name : 'Chat';
   document.getElementById('chat-header-status').textContent = 'online';
   document.getElementById('chat-messages').innerHTML = '';
   showScreen('chat-screen');
-  document.getElementById('bottom-nav').style.display = 'none';
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'none';
   loadMessages(otherId);
 }
 
@@ -535,7 +517,6 @@ function openSavedMessages() {
     id: currentUser.id,
     profile: {
       display_name: 'Saved Messages',
-      username: 'saved',
       tego_id: currentProfile.tego_id
     },
     saved: true
@@ -545,7 +526,8 @@ function openSavedMessages() {
   document.getElementById('chat-header-status').textContent = '';
   document.getElementById('chat-messages').innerHTML = '';
   showScreen('chat-screen');
-  document.getElementById('bottom-nav').style.display = 'none';
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'none';
   loadMessages(currentUser.id, true);
 }
 
@@ -565,29 +547,29 @@ async function openChatByTegoId(tegoId) {
   }
 }
 
-async function loadMessages(otherId, saved = false) {
+async function loadMessages(otherId, saved) {
   const messagesDiv = document.getElementById('chat-messages');
   if (!messagesDiv) return;
   
   try {
-    let query = supabase
-      .from('messages')
-      .select('*');
+    let query = supabase.from('messages').select('*');
     
     if (saved) {
       query = query.eq('sender_id', currentUser.id).eq('receiver_id', currentUser.id);
     } else {
-      query = query.or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${otherId}),and(sender_id.eq.${otherId},receiver_id.eq.${currentUser.id})`);
+      query = query.or('and(sender_id.eq.' + currentUser.id + ',receiver_id.eq.' + otherId + '),and(sender_id.eq.' + otherId + ',receiver_id.eq.' + currentUser.id + ')');
     }
     
     const { data: messages } = await query.order('created_at', { ascending: true });
     
     if (messages && messages.length > 0) {
-      messagesDiv.innerHTML = messages.map(msg => {
+      let html = '';
+      for (let i = 0; i < messages.length; i++) {
+        const msg = messages[i];
         const isSent = msg.sender_id === currentUser.id;
-        const statusIcon = msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓';
+        const statusIcon = msg.status === 'read' ? '✓✓' : '✓';
         
-        return `
+        html += `
           <div class="message ${isSent ? 'sent' : 'received'}">
             <div>${msg.message || ''}</div>
             <div class="message-meta">
@@ -596,17 +578,14 @@ async function loadMessages(otherId, saved = false) {
             </div>
           </div>
         `;
-      }).join('');
+      }
+      messagesDiv.innerHTML = html;
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } else {
-      messagesDiv.innerHTML = `
-        <div class="empty-state">
-          <p>No messages yet</p>
-        </div>
-      `;
+      messagesDiv.innerHTML = '<div class="empty-state"><p>No messages yet</p></div>';
     }
   } catch (err) {
-    console.log('Error loading messages:', err);
+    console.log('Messages error:', err);
   }
 }
 
@@ -628,7 +607,7 @@ async function sendMessage() {
         receiver_id: receiverId,
         sender_tego_id: currentProfile.tego_id,
         receiver_tego_id: receiverTegoId,
-        message,
+        message: message,
         status: 'sent'
       });
     
@@ -637,10 +616,10 @@ async function sendMessage() {
       loadMessages(currentChat.id, isSaved);
       loadChats();
     } else {
-      showToast('Failed to send message');
+      showToast('Failed to send');
     }
   } catch (err) {
-    showToast('Failed to send message');
+    showToast('Failed to send');
   }
 }
 
@@ -653,8 +632,8 @@ function setupRealtime() {
     realtimeChannel = supabase
       .channel('tego-changes')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` },
-        () => {
+        { event: '*', schema: 'public', table: 'messages', filter: 'receiver_id=eq.' + currentUser.id },
+        function() {
           loadChats();
           if (currentChat) {
             loadMessages(currentChat.id, currentChat.saved);
@@ -668,7 +647,7 @@ function setupRealtime() {
 }
 
 function setupInstallPrompt() {
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredInstallPrompt = e;
     const banner = document.getElementById('install-banner');
@@ -677,7 +656,7 @@ function setupInstallPrompt() {
   
   const installBtn = document.getElementById('install-btn');
   if (installBtn) {
-    installBtn.addEventListener('click', async () => {
+    installBtn.addEventListener('click', async function() {
       if (deferredInstallPrompt) {
         deferredInstallPrompt.prompt();
         await deferredInstallPrompt.userChoice;
@@ -693,50 +672,7 @@ async function handleLogout() {
   await supabase.auth.signOut();
 }
 
-async function init() {
-  try {
-    if (typeof window.supabase === 'undefined') {
-      showFatalError('Supabase library not loaded. Check your internet connection.');
-      return;
-    }
-    
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      showFatalError('Could not connect to Tego servers.');
-      return;
-    }
-    
-    if (session) {
-      currentUser = session.user;
-      
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_id', currentUser.id)
-        .single();
-      
-      if (profileError) {
-        await supabase.auth.signOut();
-        renderAuth();
-        return;
-      }
-      
-      if (profile) {
-        currentProfile = profile;
-        renderMainApp();
-      }
-    } else {
-      renderAuth();
-    }
-  } catch (err) {
-    showFatalError(err.message || 'Unknown error occurred');
-  }
-}
-
-supabase.auth.onAuthStateChange((event, session) => {
+supabase.auth.onAuthStateChange(function(event, session) {
   if (event === 'SIGNED_IN' && session) {
     currentUser = session.user;
     supabase
@@ -744,9 +680,9 @@ supabase.auth.onAuthStateChange((event, session) => {
       .select('*')
       .eq('auth_id', currentUser.id)
       .single()
-      .then(({ data: profile }) => {
-        if (profile) {
-          currentProfile = profile;
+      .then(function(result) {
+        if (result.data) {
+          currentProfile = result.data;
           renderMainApp();
         }
       });
@@ -758,9 +694,42 @@ supabase.auth.onAuthStateChange((event, session) => {
   }
 });
 
+async function init() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      renderAuth();
+      return;
+    }
+    
+    if (data && data.session) {
+      currentUser = data.session.user;
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('auth_id', currentUser.id)
+        .single();
+      
+      if (profile) {
+        currentProfile = profile;
+        renderMainApp();
+      } else {
+        await supabase.auth.signOut();
+        renderAuth();
+      }
+    } else {
+      renderAuth();
+    }
+  } catch (err) {
+    renderAuth();
+  }
+}
+
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').catch(function() {});
   });
 }
 
