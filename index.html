@@ -14,37 +14,30 @@
   <button id="login-btn">Login</button>
   <p id="result"></p>
   
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    document.getElementById('status').textContent = 'Script running';
-    
-    const supabase = window.supabase.createClient(
-      'https://wepbechfempjhabhzbyk.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcGJlY2hmZW1wamhhYmh6YnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzc5NTksImV4cCI6MjEwMjgxMzk1OX0.msTHVjOeJBEdzr6vguP9fXiIHUxQbXHCG3X8M-hCl6c'
-    );
-    
-    document.getElementById('status').textContent = 'Supabase ready';
-    
-    document.getElementById('login-btn').addEventListener('click', async function() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      const result = document.getElementById('result');
+    setTimeout(function() {
+      const status = document.getElementById('status');
       
-      result.textContent = 'Attempting login...';
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
-      });
-      
-      if (error) {
-        result.textContent = 'Error: ' + error.message;
-        result.style.color = 'red';
+      if (typeof window.supabase === 'undefined') {
+        status.textContent = 'Supabase library failed to load';
+        status.style.color = 'red';
       } else {
-        result.textContent = 'Success! User: ' + data.user.email;
-        result.style.color = 'green';
+        status.textContent = 'Supabase loaded';
+        status.style.color = 'green';
+        
+        try {
+          const supabase = window.supabase.createClient(
+            'https://wepbechfempjhabhzbyk.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcGJlY2hmZW1wamhhYmh6YnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzc5NTksImV4cCI6MjEwMjgxMzk1OX0.msTHVjOeJBEdzr6vguP9fXiIHUxQbXHCG3X8M-hCl6c'
+          );
+          status.textContent += ' | Client ready';
+        } catch (err) {
+          status.textContent = 'Error: ' + err.message;
+          status.style.color = 'red';
+        }
       }
-    });
+    }, 2000);
   </script>
 </body>
 </html>
