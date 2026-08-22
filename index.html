@@ -2,25 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#2563EB">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tego</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <div id="loading">
-      <div class="loader">
-        <div class="loader-icon">T</div>
-        <p>Loading Tego</p>
-      </div>
-    </div>
-  </div>
+  <h1>Tego Login</h1>
+  <p id="status">Loading...</p>
+  
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Password">
+  <button id="login-btn">Login</button>
+  <p id="result"></p>
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js"></script>
+  <script>
+    document.getElementById('status').textContent = 'Script running';
+    
+    const supabase = window.supabase.createClient(
+      'https://wepbechfempjhabhzbyk.supabase.co',
+      'YOUR_ANON_KEY_HERE'
+    );
+    
+    document.getElementById('status').textContent = 'Supabase ready';
+    
+    document.getElementById('login-btn').addEventListener('click', async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const result = document.getElementById('result');
+      
+      result.textContent = 'Attempting login...';
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+      
+      if (error) {
+        result.textContent = 'Error: ' + error.message;
+        result.style.color = 'red';
+      } else {
+        result.textContent = 'Success! User: ' + data.user.email;
+        result.style.color = 'green';
+      }
+    });
+  </script>
 </body>
 </html>
