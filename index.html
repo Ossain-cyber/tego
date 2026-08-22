@@ -2,42 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2563EB">
   <title>Tego</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Tego Login</h1>
-  <p id="status">Loading...</p>
-  
-  <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Password">
-  <button id="login-btn">Login</button>
-  <p id="result"></p>
-  
+  <div id="app">
+    <div id="loading">
+      <div class="loader">
+        <div class="loader-icon">T</div>
+        <p>Loading Tego</p>
+      </div>
+    </div>
+  </div>
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    setTimeout(function() {
-      const status = document.getElementById('status');
-      
-      if (typeof window.supabase === 'undefined') {
-        status.textContent = 'Supabase library failed to load';
-        status.style.color = 'red';
-      } else {
-        status.textContent = 'Supabase loaded';
-        status.style.color = 'green';
-        
-        try {
-          const supabase = window.supabase.createClient(
-            'https://wepbechfempjhabhzbyk.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcGJlY2hmZW1wamhhYmh6YnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzc5NTksImV4cCI6MjEwMjgxMzk1OX0.msTHVjOeJBEdzr6vguP9fXiIHUxQbXHCG3X8M-hCl6c'
-          );
-          status.textContent += ' | Client ready';
-        } catch (err) {
-          status.textContent = 'Error: ' + err.message;
-          status.style.color = 'red';
-        }
-      }
-    }, 2000);
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
