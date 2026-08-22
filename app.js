@@ -1,8 +1,7 @@
 const SUPABASE_URL = 'https://wepbechfempjhabhzbyk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndlcGJlY2hmZW1wamhhYmh6YnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMzc5NTksImV4cCI6MjEwMjgxMzk1OX0.msTHVjOeJBEdzr6vguP9fXiIHUxQbXHCG3X8M-hCl6c';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+let supabase;
 let currentUser = null;
 let currentProfile = null;
 let currentChat = null;
@@ -22,9 +21,7 @@ function showScreen(screenId) {
     screens[i].classList.remove('active');
   }
   const screen = document.getElementById(screenId);
-  if (screen) {
-    screen.classList.add('active');
-  }
+  if (screen) screen.classList.add('active');
 }
 
 function showToast(message) {
@@ -52,7 +49,6 @@ function formatTime(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now - date;
-  
   if (diff < 60000) return 'now';
   if (diff < 3600000) return Math.floor(diff / 60000) + 'm';
   if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -61,7 +57,6 @@ function formatTime(timestamp) {
 
 function renderAuth() {
   document.getElementById('loading').style.display = 'none';
-  
   const app = document.getElementById('app');
   app.innerHTML = `
     <div id="auth-screen" class="screen auth-screen active">
@@ -102,7 +97,11 @@ function renderAuth() {
   document.getElementById('show-signup').addEventListener('click', function(e) {
     e.preventDefault();
     const signupFields = document.getElementById('signup-fields');
-    signupFields.style.display = signupFields.style.display === 'none' ? 'block' : 'none';
+    if (signupFields.style.display === 'none') {
+      signupFields.style.display = 'block';
+    } else {
+      signupFields.style.display = 'none';
+    }
   });
   
   document.getElementById('login-btn').addEventListener('click', handleLogin);
@@ -124,10 +123,16 @@ async function handleLogin() {
   btn.disabled = true;
   btn.textContent = 'Logging in...';
   
-  const { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
-  
-  if (error) {
-    errorEl.textContent = error.message;
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Login';
+    }
+  } catch (err) {
+    errorEl.textContent = 'Connection failed';
     errorEl.classList.add('show');
     btn.disabled = false;
     btn.textContent = 'Login';
@@ -151,51 +156,55 @@ async function handleSignup() {
   btn.disabled = true;
   btn.textContent = 'Creating...';
   
-  const { data: authData, error: authError } = await supabase.auth.signUp({ email: email, password: password });
-  
-  if (authError) {
-    errorEl.textContent = authError.message;
-    errorEl.classList.add('show');
-    btn.disabled = false;
-    btn.textContent = 'Create Account';
-    return;
-  }
-  
-  if (authData.user) {
-    const tegoId = generateTegoId();
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        auth_id: authData.user.id,
-        username: username,
-        tego_id: tegoId,
-        display_name: displayName || username
-      });
+  try {
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email: email, password: password });
     
-    if (profileError) {
-      errorEl.textContent = profileError.message;
+    if (authError) {
+      errorEl.textContent = authError.message;
       errorEl.classList.add('show');
       btn.disabled = false;
       btn.textContent = 'Create Account';
+      return;
     }
+    
+    if (authData.user) {
+      const tegoId = generateTegoId();
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          auth_id: authData.user.id,
+          username: username,
+          tego_id: tegoId,
+          display_name: displayName || username
+        });
+      
+      if (profileError) {
+        errorEl.textContent = profileError.message;
+        errorEl.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
+      }
+    }
+  } catch (err) {
+    errorEl.textContent = 'Connection failed';
+    errorEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
   }
 }
 
 function renderMainApp() {
   document.getElementById('loading').style.display = 'none';
-  
   const app = document.getElementById('app');
   const displayName = currentProfile ? currentProfile.display_name : 'User';
   const username = currentProfile ? currentProfile.username : '';
   const tegoId = currentProfile ? currentProfile.tego_id : '';
-  const avatarUrl = currentProfile ? currentProfile.avatar_url : '';
   
   app.innerHTML = `
     <div id="install-banner" class="install-banner">
       <span>Install Tego</span>
       <button class="install-btn" id="install-btn">Install</button>
     </div>
-    
     <div id="chats-screen" class="screen active">
       <div class="main-header">
         <h2>Tego</h2>
@@ -203,7 +212,6 @@ function renderMainApp() {
       </div>
       <div class="chat-list" id="chat-list"></div>
     </div>
-    
     <div id="contacts-screen" class="screen">
       <div class="main-header">
         <h2>Contacts</h2>
@@ -214,7 +222,6 @@ function renderMainApp() {
       </div>
       <div class="contacts-list" id="contacts-list"></div>
     </div>
-    
     <div id="profile-screen" class="screen">
       <div class="main-header">
         <h2>Profile</h2>
@@ -236,7 +243,6 @@ function renderMainApp() {
         </div>
       </div>
     </div>
-    
     <div id="chat-screen" class="screen">
       <div class="main-header">
         <button class="back-btn" id="back-btn">←</button>
@@ -251,7 +257,6 @@ function renderMainApp() {
         <button class="send-btn" id="send-btn">➤</button>
       </div>
     </div>
-    
     <div class="bottom-nav">
       <div class="nav-item active" data-screen="chats-screen">
         <span>💬</span> Chats
@@ -281,11 +286,9 @@ function renderMainApp() {
   });
   
   document.getElementById('send-btn').addEventListener('click', sendMessage);
-  
   document.getElementById('chat-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') sendMessage();
   });
-  
   document.getElementById('contact-search').addEventListener('input', searchContacts);
   
   const navItems = document.querySelectorAll('.nav-item');
@@ -341,8 +344,7 @@ async function loadChats() {
             id: otherId,
             tegoId: otherTegoId,
             lastMessage: msg.message,
-            timestamp: msg.created_at,
-            status: msg.status
+            timestamp: msg.created_at
           };
         }
       }
@@ -355,7 +357,7 @@ async function loadChats() {
         
         const { data: profile } = await supabase
           .from('profiles')
-          .select('display_name, username, tego_id, avatar_url')
+          .select('display_name, username, tego_id')
           .eq('tego_id', chat.tegoId)
           .single();
         
@@ -672,30 +674,10 @@ async function handleLogout() {
   await supabase.auth.signOut();
 }
 
-supabase.auth.onAuthStateChange(function(event, session) {
-  if (event === 'SIGNED_IN' && session) {
-    currentUser = session.user;
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('auth_id', currentUser.id)
-      .single()
-      .then(function(result) {
-        if (result.data) {
-          currentProfile = result.data;
-          renderMainApp();
-        }
-      });
-  } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    currentProfile = null;
-    currentChat = null;
-    renderAuth();
-  }
-});
-
 async function init() {
   try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -726,6 +708,28 @@ async function init() {
     renderAuth();
   }
 }
+
+supabase.auth.onAuthStateChange(function(event, session) {
+  if (event === 'SIGNED_IN' && session) {
+    currentUser = session.user;
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('auth_id', currentUser.id)
+      .single()
+      .then(function(result) {
+        if (result.data) {
+          currentProfile = result.data;
+          renderMainApp();
+        }
+      });
+  } else if (event === 'SIGNED_OUT') {
+    currentUser = null;
+    currentProfile = null;
+    currentChat = null;
+    renderAuth();
+  }
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
