@@ -385,7 +385,7 @@ async function isUsernameAvailable(username) {
     APP.supabase
     .from("profiles")
     .select("id")
-    .eq("username", username);
+    .ilike("username", username); // ✅ FIX 1: Case-insensitive search
 
     if (profile) {
 
@@ -558,7 +558,7 @@ async function sendMediaMessage({
         mime_type,
 
         message_type:
-        mime_type.startsWith(
+        (mime_type || "").startsWith( // ✅ FIX 2: Prevent crash if mime_type is null
             "image/"
         )
         ? "image"
@@ -574,24 +574,30 @@ async function sendMediaMessage({
     if (error) throw error;
 
     return data;
-  }
-window.isUsernameAvailable =
-isUsernameAvailable;
+}
 
-window.isTegoIdAvailable =
-isTegoIdAvailable;
+// ✅ FIX 3: Add alias for logout compatibility
+window.logoutUser = signOutUser;
 
-window.updateLastSeen =
-updateLastSeen;
+// ✅ FIX 4: Add helper function
+async function getProfileByTegoId(tegoId) {
+    const { data, error } = await APP.supabase
+        .from("profiles")
+        .select("*")
+        .eq("tego_id", tegoId)
+        .single();
+    
+    if (error) {
+        return null;
+    }
+    return data;
+}
 
-window.updateMessageStatus =
-updateMessageStatus;
-
-window.editMessage =
-editMessage;
-
-window.softDeleteMessage =
-softDeleteMessage;
-
-window.sendMediaMessage =
-sendMediaMessage;
+window.isUsernameAvailable = isUsernameAvailable;
+window.isTegoIdAvailable = isTegoIdAvailable;
+window.updateLastSeen = updateLastSeen;
+window.updateMessageStatus = updateMessageStatus;
+window.editMessage = editMessage;
+window.softDeleteMessage = softDeleteMessage;
+window.sendMediaMessage = sendMediaMessage;
+window.getProfileByTegoId = getProfileByTegoId; // ✅ Export the new helper
