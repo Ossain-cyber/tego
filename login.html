@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>Tego Login</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="app.js"></script>
+</head>
+<body>
+
+<div class="auth-page">
+
+<div class="auth-card">
+
+<div class="logo-box">
+<img src="icon-192.png" alt="Tego">
+</div>
+
+<h1 class="app-title">Tego</h1>
+
+<p class="app-subtitle">
+Welcome back
+</p>
+
+<form id="login-form">
+
+<div class="input-group">
+<input
+class="input"
+type="email"
+id="email"
+placeholder="Email"
+required
+>
+</div>
+
+<div class="input-group">
+<input
+class="input"
+type="password"
+id="password"
+placeholder="Password"
+required
+>
+</div>
+
+<button
+type="submit"
+class="btn"
+id="login-btn"
+>
+Login
+</button>
+
+</form>
+
+<a
+href="register.html"
+class="link"
+>
+Create Account
+</a>
+
+</div>
+
+</div>
+
+<script>
+
+document.addEventListener(
+"DOMContentLoaded",
+() => {
+
+const form =
+document.getElementById(
+"login-form"
+);
+
+const button =
+document.getElementById(
+"login-btn"
+);
+
+form.addEventListener(
+"submit",
+async e => {
+
+e.preventDefault();
+
+const email =
+document
+.getElementById("email")
+.value
+.trim();
+
+const password =
+document
+.getElementById("password")
+.value;
+
+if(!email || !password){
+
+showToast(
+"Fill all fields"
+);
+
+return;
+}
+
+try{
+
+button.disabled = true;
+
+button.textContent =
+"Signing In...";
+
+await signIn(
+email,
+password
+);
+
+showToast(
+"Login successful"
+);
+
+setTimeout(() => {
+
+window.location.href =
+"chats.html";
+
+},500);
+
+}catch(error){
+
+showToast(
+error.message ||
+"Login failed"
+);
+
+button.disabled = false;
+
+button.textContent =
+"Login";
+
+}
+
+});
+
+});
+</script>
+
+</body>
+</html>
