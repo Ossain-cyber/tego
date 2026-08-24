@@ -51,7 +51,20 @@ function bindProfileEvents() {
 }
 
 async function loadExistingProfile() {
+const bioField =
+document.getElementById(
+"bio"
+);
 
+if(
+bioField &&
+profile.bio
+){
+
+    bioField.value =
+    profile.bio;
+
+}
     const profile =
     await getMyProfile();
 
@@ -304,13 +317,28 @@ async function saveProfile() {
 
         if (existing) {
 
-            const updateData = {
+            const bio =
+document
+.getElementById(
+"bio"
+)
+.value
+.trim();
 
-                username,
-                display_name:
-                displayName
+const updateData = {
 
-            };
+    username,
+
+    display_name:
+    displayName,
+
+    bio,
+
+    updated_at:
+    new Date()
+    .toISOString()
+
+};
 
             if (
                 avatarUrl
@@ -329,21 +357,23 @@ async function saveProfile() {
 
             await createProfile({
 
-                auth_id:
-                user.id,
+    auth_id:
+    user.id,
 
-                username,
+    username,
 
-                display_name:
-                displayName,
+    display_name:
+    displayName,
 
-                avatar_url:
-                avatarUrl,
+    avatar_url:
+    avatarUrl,
 
-                tego_id:
-                generatedTegoId
+    bio,
 
-            });
+    tego_id:
+    generatedTegoId
+
+});
 
         }
 
