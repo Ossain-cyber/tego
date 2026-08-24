@@ -194,11 +194,16 @@ async function getProfile() {
     APP.profile = data;
 
     return data;
-}
+}function openChat(chat) {
 
-function openChat(tegoId) {
-    localStorage.setItem("activeChat", tegoId);
-    window.location.href = "chat.html";
+    localStorage.setItem(
+        "activeChat",
+        JSON.stringify(chat)
+    );
+
+    window.location.href =
+    "chat.html";
+
 }
 
 function openProfile() {
@@ -216,7 +221,32 @@ function openChats() {
 function openSettings() {
     window.location.href = "settings.html";
 }
+function getActiveChat() {
 
+    const data =
+    localStorage.getItem(
+        "activeChat"
+    );
+
+    if (!data) {
+        return null;
+    }
+
+    try {
+
+        return JSON.parse(
+            data
+        );
+
+    } catch {
+
+        return null;
+
+    }
+
+}
+window.getActiveChat =
+getActiveChat;
 window.APP = APP;
 window.logout = logout;
 window.showToast = showToast;
