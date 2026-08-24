@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>Chat - Tego</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="app.js"></script>
+</head>
+<body>
+
+<div class="page">
+
+<div class="topbar">
+
+<div
+id="chat-user"
+class="list-item"
+style="padding:0;"
+>
+
+<img
+id="chat-avatar"
+class="avatar"
+src="icon-192.png"
+>
+
+<div class="info">
+
+<div
+id="chat-name"
+class="name"
+>
+Loading...
+</div>
+
+<div
+id="chat-status"
+class="subtext"
+>
+Online
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="messages"
+class="chat-wrapper"
+>
+</div>
+
+<div class="chat-input-bar">
+
+<input
+id="message-input"
+class="chat-input"
+placeholder="Message..."
+autocomplete="off"
+>
+
+<input
+type="file"
+id="media-input"
+hidden
+>
+
+<button
+id="media-btn"
+class="send-btn"
+type="button"
+>
++
+</button>
+
+<button
+id="send-btn"
+class="send-btn"
+type="button"
+>
+➤
+</button>
+
+</div>
+
+</div>
+
+<script>
+
+let activeContact = null;
+
+document.addEventListener(
+"DOMContentLoaded",
+async () => {
+
+const saved =
+localStorage.getItem(
+"activeChat"
+);
+
+if(!saved){
+
+window.location.href =
+"chats.html";
+
+return;
+
+}
+
+activeContact =
+JSON.parse(saved);
+
+document.getElementById(
+"chat-name"
+).textContent =
+activeContact.nickname ||
+activeContact.contact_username;
+
+await loadMessages();
+
+subscribeMessages(
+async () => {
+await loadMessages();
+}
+);
+
+document
+.getElementById(
+"send-btn"
+)
+.addEventListener(
+"click",
+sendTextMessage
+);
+
+document
+.getElementById(
+"message-input"
+)
+.addEventListener(
+"keydown",
+e => {
+
+if(
+e.key === "Enter"
+){
+
+sendTextMessage();
+
+}
+
+}
+);
+
+document
+.getElementById(
+"media-btn"
+)
+.addEventListener(
+"click",
+() => {
+
+document
+.getElementById(
+"media-input"
+)
+.click();
+
+}
+);
+
+document
+.getElementById(
+"media-input"
+)
+.addEventListener(
+"change",
+sendMedia
+);
+
+});
+
+async function loadMessages(){
+
+try{
+
+const profile =
+await getProfile();
+
+const all =
+await APP.supabase
+.from("messages")
+.select("*")
+.or(
+`and(sender_tego_id.eq.${profile.tego_id},receiver_tego_id.eq.${activeContact.contact_tego_id}),and(sender_tego_id.eq.${activeContact.contact_tego_id},receiver_tego_id.eq.${profile.tego_id})`
+)
+.order(
+"created_at",
+{
+ascending:true
+}
+);
+
+renderMessages(
+all.data || []
+);
+
+await markMessagesRead(
+activeContact.contact_tego_id
+);
+
+}catch(error){
+
+console.error(
+error
+);
+
+}
+
+}
+
+function renderMessages(
+messages
+){
+
+const container =
+document.getElementById(
+"messages"
+);
+
+container.innerHTML = "";
+
+messages.forEach(msg => {
+
+const mine =
+msg.sender_id ===
+APP.user.id;
+
+const div =
+document.createElement(
+"div"
+);
+
+div.className =
+`message ${
+mine
+?
+"me"
+:
+"other"
+}`;
+
+let content =
+msg.message || "";
+
+if(
+msg.message_type ===
+"image"
+){
+
+content =
+`
+<img
+src="${msg.message}"
+style="
+max-width:220px;
+border-radius:12px;
+"
+>
+`;
+
+}
+
+if(
+msg.message_type ===
+"file"
+){
+
+content =
+`
+<a
+href="${msg.message}"
+target="_blank"
+>
+Download File
+</a>
+`;
+
+}
+
+div.innerHTML = `
+
+${content}
+
+<div
+class="message-time"
+>
+${formatTime(
+msg.created_at
+)}
+</div>
+
+`;
+
+container.appendChild(
+div
+);
+
+});
+
+container.scrollTop =
+container.scrollHeight;
+
+window.scrollTo(
+0,
+document.body.scrollHeight
+);
+
+}
+
+async function sendTextMessage(){
+
+const input =
+document.getElementById(
+"message-input"
+);
+
+const text =
+input.value.trim();
+
+if(!text) return;
+
+try{
+
+const profile =
+await getProfile();
+
+await sendMessage({
+
+sender_id:
+APP.user.id,
+
+receiver_id:
+activeContact.owner_id,
+
+sender_tego_id:
+profile.tego_id,
+
+receiver_tego_id:
+activeContact.contact_tego_id,
+
+message:
+text,
+
+message_type:
+"text",
+
+status:
+"sent"
+
+});
+
+input.value = "";
+
+}catch(error){
+
+showToast(
+"Failed to send"
+);
+
+}
+
+}
+
+async function sendMedia(){
+
+const file =
+document
+.getElementById(
+"media-input"
+)
+.files[0];
+
+if(!file) return;
+
+try{
+
+const url =
+await uploadMedia(
+file
+);
+
+const profile =
+await getProfile();
+
+await sendMessage({
+
+sender_id:
+APP.user.id,
+
+receiver_id:
+activeContact.owner_id,
+
+sender_tego_id:
+profile.tego_id,
+
+receiver_tego_id:
+activeContact.contact_tego_id,
+
+message:url,
+
+message_type:
+file.type.startsWith(
+"image/"
+)
+?
+"image"
+:
+"file",
+
+status:
+"sent"
+
+});
+
+showToast(
+"Sent"
+);
+
+}catch(error){
+
+showToast(
+"Upload failed"
+);
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
