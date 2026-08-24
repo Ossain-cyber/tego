@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>Tego</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="app.js"></script>
+</head>
+<body>
+
+<div class="page">
+
+<div class="topbar">
+<div class="topbar-title">Tego</div>
+
+<button
+id="new-chat-btn"
+class="btn-secondary"
+style="width:48px;height:48px;border-radius:14px;"
+>
++
+</button>
+</div>
+
+<div class="search-box">
+<input
+type="text"
+id="chat-search"
+class="search-input"
+placeholder="Search chats"
+>
+</div>
+
+<div class="container">
+
+<div
+id="profile-card"
+class="card"
+style="display:none;"
+>
+<div class="list-item">
+
+<img
+id="profile-avatar"
+class="avatar"
+src="icon-192.png"
+alt=""
+>
+
+<div class="info">
+<div
+id="profile-name"
+class="name"
+>
+Loading...
+</div>
+
+<div
+id="profile-id"
+class="subtext"
+>
+Loading...
+</div>
+</div>
+
+</div>
+</div>
+
+<div
+id="chat-list"
+>
+</div>
+
+<div
+id="empty-state"
+class="card"
+style="display:none;"
+>
+<div class="name">
+No conversations yet
+</div>
+
+<div class="subtext mt-10">
+Add contacts and start chatting
+</div>
+</div>
+
+</div>
+
+<div class="bottom-nav">
+
+<a
+href="chats.html"
+class="nav-item active"
+>
+<span>Chats</span>
+</a>
+
+<a
+href="contacts.html"
+class="nav-item"
+>
+<span>Contacts</span>
+</a>
+
+<a
+href="settings.html"
+class="nav-item"
+>
+<span>Settings</span>
+</a>
+
+</div>
+
+</div>
+
+<script>
+
+let chats = [];
+
+document.addEventListener(
+"DOMContentLoaded",
+async () => {
+
+await loadProfile();
+
+await loadChats();
+
+subscribeMessages(
+async () => {
+await loadChats();
+}
+);
+
+document
+.getElementById(
+"new-chat-btn"
+)
+.addEventListener(
+"click",
+() => {
+window.location.href =
+"contacts.html";
+}
+);
+
+document
+.getElementById(
+"chat-search"
+)
+.addEventListener(
+"input",
+filterChats
+);
+
+});
+
+async function loadProfile(){
+
+const profile =
+await getProfile();
+
+if(!profile) return;
+
+document
+.getElementById(
+"profile-card"
+)
+.style.display =
+"block";
+
+document
+.getElementById(
+"profile-name"
+)
+.textContent =
+profile.display_name ||
+profile.username;
+
+document
+.getElementById(
+"profile-id"
+)
+.textContent =
+profile.tego_id;
+
+if(profile.avatar_url){
+
+document
+.getElementById(
+"profile-avatar"
+)
+.src =
+profile.avatar_url;
+
+}
+
+}
+
+async function loadChats(){
+
+try{
+
+const contacts =
+await getContacts();
+
+chats = contacts || [];
+
+renderChats(
+chats
+);
+
+}catch(error){
+
+showToast(
+"Failed to load chats"
+);
+
+}
+
+}
+
+function renderChats(data){
+
+const container =
+document.getElementById(
+"chat-list"
+);
+
+const empty =
+document.getElementById(
+"empty-state"
+);
+
+container.innerHTML = "";
+
+if(!data.length){
+
+empty.style.display =
+"block";
+
+return;
+
+}
+
+empty.style.display =
+"none";
+
+data.forEach(contact => {
+
+const item =
+document.createElement(
+"div"
+);
+
+item.className =
+"card";
+
+item.innerHTML = `
+
+<div class="list-item">
+
+<img
+class="avatar"
+src="icon-192.png"
+alt=""
+>
+
+<div class="info">
+
+<div class="name">
+${contact.nickname ||
+contact.contact_username ||
+"Unknown"}
+</div>
+
+<div class="subtext">
+Tap to open chat
+</div>
+
+</div>
+
+</div>
+
+`;
+
+item.addEventListener(
+"click",
+() => {
+
+localStorage.setItem(
+"activeChat",
+JSON.stringify(contact)
+);
+
+window.location.href =
+"chat.html";
+
+}
+);
+
+container.appendChild(
+item
+);
+
+});
+
+}
+
+function filterChats(){
+
+const value =
+document
+.getElementById(
+"chat-search"
+)
+.value
+.toLowerCase();
+
+const filtered =
+chats.filter(chat => {
+
+const text =
+(
+chat.nickname ||
+chat.contact_username ||
+""
+)
+.toLowerCase();
+
+return text.includes(
+value
+);
+
+});
+
+renderChats(
+filtered
+);
+
+}
+
+</script>
+
+</body>
+</html>
