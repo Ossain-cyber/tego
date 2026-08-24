@@ -3,431 +3,131 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="theme-color" content="#2563eb">
-<title>Contacts - Tego</title>
+<title>Tego Contacts</title>
 
-<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script src="supabase.js"></script>
 <script src="app.js"></script>
+<script src="auth.js"></script>
+<script src="contacts.js"></script>
 </head>
 <body>
 
-<div class="page">
+<div class="app">
 
-<div class="topbar">
-<div class="topbar-title">Contacts</div>
+<header class="topbar">
+
+<div class="topbar-title">
+Contacts
 </div>
 
-<div class="search-box">
-<input
-id="search"
-class="search-input"
-placeholder="Search username or Tego ID"
-autocomplete="off"
+<div class="topbar-actions">
+
+<button
+type="button"
+onclick="openChats()"
+class="icon-btn"
 >
+Chats
+</button>
+
 </div>
+
+</header>
 
 <div class="container">
 
-<div id="results"></div>
+<div class="card">
 
-<div id="my-contacts" class="mt-20"></div>
+<input
+type="text"
+id="search-input"
+placeholder="Search username or Tego ID"
+autocomplete="off"
+>
+
+<button
+id="search-btn"
+class="btn"
+>
+Search
+</button>
+
+</div>
+
+<div
+id="search-results"
+class="results-list"
+>
+</div>
+
+<div
+id="contacts-list"
+class="contacts-list"
+>
+
+<div class="empty-state">
+Loading contacts...
+</div>
 
 </div>
 
-<div class="bottom-nav">
-
-<a href="chats.html" class="nav-item">
-<span>Chats</span>
-</a>
-
-<a href="contacts.html" class="nav-item active">
-<span>Contacts</span>
-</a>
-
-<a href="settings.html" class="nav-item">
-<span>Settings</span>
-</a>
-
 </div>
+
+<nav class="bottom-nav">
+
+<button
+onclick="openChats()"
+class="nav-btn"
+>
+Chats
+</button>
+
+<button
+onclick="openContacts()"
+class="nav-btn active"
+>
+Contacts
+</button>
+
+<button
+onclick="openProfile()"
+class="nav-btn"
+>
+Profile
+</button>
+
+<button
+onclick="openSettings()"
+class="nav-btn"
+>
+Settings
+</button>
+
+</nav>
 
 </div>
 
 <script>
 
-let searchTimer;
-
 document.addEventListener(
 "DOMContentLoaded",
 async () => {
 
-await loadContacts();
+if (
+typeof initContactsPage ===
+"function"
+) {
 
-document
-.getElementById("search")
-.addEventListener(
-"input",
-handleSearch
-);
-
-subscribeContacts(
-loadContacts
-);
-
-});
-
-function handleSearch(){
-
-clearTimeout(
-searchTimer
-);
-
-const value =
-document
-.getElementById("search")
-.value
-.trim();
-
-if(value.length < 2){
-
-document
-.getElementById("results")
-.innerHTML = "";
-
-return;
-}
-
-searchTimer =
-setTimeout(
-() => searchProfilesList(value),
-400
-);
-
-}
-
-async function searchProfilesList(
-query
-){
-
-try{
-
-const results =
-await searchProfiles(
-query
-);
-
-renderResults(
-results
-);
-
-}catch(error){
-
-showToast(
-"Search failed"
-);
+await initContactsPage();
 
 }
 
 }
-
-function renderResults(
-users
-){
-
-const container =
-document.getElementById(
-"results"
 );
-
-container.innerHTML = "";
-
-if(!users.length){
-
-container.innerHTML = `
-
-<div class="card">
-
-<div class="subtext">
-No users found
-</div>
-
-</div>
-
-`;
-
-return;
-
-}
-
-users.forEach(user => {
-
-const card =
-document.createElement(
-"div"
-);
-
-card.className =
-"card";
-
-card.innerHTML = `
-
-<div class="list-item">
-
-<img
-class="avatar"
-src="${
-user.avatar_url ||
-generateAvatar(
-user.username
-)
-}"
->
-
-<div class="info">
-
-<div class="name">
-${user.display_name || user.username}
-</div>
-
-<div class="subtext">
-${user.tego_id}
-</div>
-
-</div>
-
-<button
-class="btn"
-style="
-width:auto;
-height:44px;
-padding:0 16px;
-"
->
-Add
-</button>
-
-</div>
-
-`;
-
-card
-.querySelector("button")
-.addEventListener(
-"click",
-() => addUser(
-user
-)
-);
-
-container.appendChild(
-card
-);
-
-});
-
-}
-
-async function addUser(
-user
-){
-
-try{
-
-const profile =
-await getProfile();
-
-if(
-profile.tego_id ===
-user.tego_id
-){
-showToast(
-"You cannot add yourself"
-);
-return;
-}
-
-await addContact({
-
-owner_id:
-APP.user.id,
-
-contact_tego_id:
-user.tego_id,
-
-contact_username:
-user.username,
-
-nickname:
-user.display_name ||
-user.username
-
-});
-
-showToast(
-"Contact added"
-);
-
-await loadContacts();
-
-}catch(error){
-
-showToast(
-error.message ||
-"Failed"
-);
-
-}
-
-}
-
-async function loadContacts(){
-
-try{
-
-const contacts =
-await getContacts();
-
-const container =
-document.getElementById(
-"my-contacts"
-);
-
-container.innerHTML = "";
-
-if(!contacts.length){
-
-container.innerHTML = `
-
-<div class="card">
-
-<div class="subtext">
-No contacts yet
-</div>
-
-</div>
-
-`;
-
-return;
-
-}
-
-contacts.forEach(contact => {
-
-const card =
-document.createElement(
-"div"
-);
-
-card.className =
-"card";
-
-card.innerHTML = `
-
-<div class="list-item">
-
-<img
-class="avatar"
-src="icon-192.png"
->
-
-<div class="info">
-
-<div class="name">
-${contact.nickname ||
-contact.contact_username}
-</div>
-
-<div class="subtext">
-${contact.contact_tego_id}
-</div>
-
-</div>
-
-<button
-style="
-background:none;
-color:#ef4444;
-font-weight:700;
-"
->
-Remove
-</button>
-
-</div>
-
-`;
-
-card
-.querySelector("button")
-.addEventListener(
-"click",
-() => removeUser(
-contact.id
-)
-);
-
-card
-.querySelector(".list-item")
-.addEventListener(
-"click",
-() => {
-
-localStorage.setItem(
-"activeChat",
-JSON.stringify(contact)
-);
-
-window.location.href =
-"chat.html";
-
-}
-);
-
-container.appendChild(
-card
-);
-
-});
-
-}catch(error){
-
-showToast(
-"Failed to load contacts"
-);
-
-}
-
-}
-
-async function removeUser(
-id
-){
-
-try{
-
-await removeContact(
-id
-);
-
-showToast(
-"Contact removed"
-);
-
-await loadContacts();
-
-}catch(error){
-
-showToast(
-"Failed"
-);
-
-}
-
-}
 
 </script>
 
