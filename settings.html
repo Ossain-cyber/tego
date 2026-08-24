@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#2563eb">
+<title>Settings - Tego</title>
+
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="app.js"></script>
+</head>
+<body>
+
+<div class="page">
+
+<div class="topbar">
+<div class="topbar-title">Settings</div>
+</div>
+
+<div class="container">
+
+<div class="card">
+
+<div style="text-align:center;">
+
+<img
+id="avatar"
+class="avatar-lg"
+src="icon-192.png"
+alt="Avatar"
+>
+
+<h2
+id="display-name"
+class="mt-20"
+>
+Loading...
+</h2>
+
+<p
+id="username"
+class="subtext mt-10"
+>
+Loading...
+</p>
+
+<p
+id="tego-id"
+class="subtext mt-10"
+>
+Loading...
+</p>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<button
+id="edit-profile"
+class="btn"
+>
+Edit Profile
+</button>
+
+<button
+id="install-app"
+class="btn btn-secondary mt-15 hidden"
+>
+Install App
+</button>
+
+<button
+id="clear-cache"
+class="btn btn-secondary mt-15"
+>
+Clear Local Cache
+</button>
+
+<button
+id="logout-btn"
+class="btn mt-15"
+style="background:#ef4444;"
+>
+Logout
+</button>
+
+</div>
+
+<div class="card">
+
+<div class="name">
+Tego
+</div>
+
+<div class="subtext mt-10">
+Fast. Simple. Private.
+</div>
+
+</div>
+
+</div>
+
+<div class="bottom-nav">
+
+<a
+href="chats.html"
+class="nav-item"
+>
+<span>Chats</span>
+</a>
+
+<a
+href="contacts.html"
+class="nav-item"
+>
+<span>Contacts</span>
+</a>
+
+<a
+href="settings.html"
+class="nav-item active"
+>
+<span>Settings</span>
+</a>
+
+</div>
+
+</div>
+
+<script>
+
+document.addEventListener(
+"DOMContentLoaded",
+async () => {
+
+await loadProfileInfo();
+
+document
+.getElementById(
+"logout-btn"
+)
+.addEventListener(
+"click",
+logout
+);
+
+document
+.getElementById(
+"edit-profile"
+)
+.addEventListener(
+"click",
+() => {
+
+window.location.href =
+"profile.html";
+
+}
+);
+
+document
+.getElementById(
+"clear-cache"
+)
+.addEventListener(
+"click",
+clearCache
+);
+
+});
+
+async function loadProfileInfo(){
+
+try{
+
+const profile =
+await getProfile();
+
+if(!profile) return;
+
+document
+.getElementById(
+"display-name"
+)
+.textContent =
+profile.display_name ||
+"Unnamed";
+
+document
+.getElementById(
+"username"
+)
+.textContent =
+"@" +
+profile.username;
+
+document
+.getElementById(
+"tego-id"
+)
+.textContent =
+profile.tego_id;
+
+if(
+profile.avatar_url
+){
+
+document
+.getElementById(
+"avatar"
+)
+.src =
+profile.avatar_url;
+
+}
+
+}catch(error){
+
+showToast(
+"Failed to load profile"
+);
+
+}
+
+}
+
+async function clearCache(){
+
+try{
+
+localStorage.clear();
+
+if(
+"caches" in window
+){
+
+const keys =
+await caches.keys();
+
+await Promise.all(
+
+keys.map(
+key =>
+caches.delete(key)
+)
+
+);
+
+}
+
+showToast(
+"Cache cleared"
+);
+
+setTimeout(
+() => {
+
+window.location.reload();
+
+},
+1000
+);
+
+}catch(error){
+
+showToast(
+"Failed"
+);
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
