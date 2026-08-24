@@ -222,11 +222,12 @@ function renderMessages(
             ) {
 
                 body = `
-                <img
-                src="${message.message}"
-                class="chat-image"
-                >
-                `;
+<img
+src="${message.media_url || message.message}"
+class="chat-image"
+loading="lazy"
+>
+`;
 
             } else if (
                 message.message_type ===
@@ -234,14 +235,14 @@ function renderMessages(
             ) {
 
                 body = `
-                <a
-                href="${message.message}"
-                target="_blank"
-                class="file-link"
-                >
-                Download File
-                </a>
-                `;
+<a
+href="${message.media_url}"
+target="_blank"
+class="file-link"
+>
+${message.file_name || "Download File"}
+</a>
+`;
 
             } else {
 
@@ -315,8 +316,7 @@ async function sendTextMessage() {
             message_type:
             "text",
 
-            status:
-            "sent"
+            status:"delivered"
 
         });
 
@@ -355,30 +355,30 @@ async function uploadAndSendMedia(
         ? "image"
         : "file";
 
-        await sendMessage({
+        await sendMediaMessage({
 
-            sender_id:
-            APP.user.id,
+receiver_id:
+activeChat.contact_auth_id,
 
-            receiver_id:
-            activeChat.contact_auth_id,
+sender_tego_id:
+currentProfile.tego_id,
 
-            sender_tego_id:
-            currentProfile.tego_id,
+receiver_tego_id:
+activeChat.contact_tego_id,
 
-            receiver_tego_id:
-            activeChat.contact_tego_id,
+media_url:
+url,
 
-            message:
-            url,
+file_name:
+file.name,
 
-            message_type:
-            type,
+file_size:
+file.size,
 
-            status:
-            "sent"
+mime_type:
+file.type
 
-        });
+});
 
         event.target.value =
         "";
