@@ -3,32 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="theme-color" content="#2563eb">
-<title>Profile Setup - Tego</title>
+<title>Tego Profile</title>
 
-<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script src="supabase.js"></script>
 <script src="app.js"></script>
+<script src="auth.js"></script>
+<script src="profile.js"></script>
 </head>
 <body>
 
 <div class="page">
 
+<div class="topbar">
+<div class="topbar-title">
+Profile
+</div>
+</div>
+
 <div class="container">
 
 <div class="card">
 
-<h2 class="mb-20">
-Complete Your Profile
-</h2>
+<div class="profile-center">
 
 <img
 id="avatar-preview"
-class="avatar-lg"
 src="icon-192.png"
+class="avatar-xl"
 alt="Avatar"
 >
 
@@ -36,55 +41,61 @@ alt="Avatar"
 type="file"
 id="avatar"
 accept="image/*"
-class="input mt-20"
 >
 
-<div class="input-group mt-20">
+</div>
+
+</div>
+
+<div class="card">
+
+<label>
+Display Name
+</label>
+
 <input
+type="text"
 id="display-name"
-class="input"
-placeholder="Display Name"
+placeholder="Your name"
 maxlength="40"
-required
 >
-</div>
 
-<div class="input-group">
+<label>
+Username
+</label>
+
 <input
+type="text"
 id="username"
-class="input"
-placeholder="Username"
+placeholder="username"
 maxlength="20"
-required
 >
-</div>
 
-<div class="input-group">
+<label>
+Bio
+</label>
+
 <textarea
 id="bio"
-class="textarea"
-placeholder="Bio (optional)"
+placeholder="Tell people about yourself"
+maxlength="160"
+rows="4"
 ></textarea>
-</div>
 
-<div class="card mt-20">
-
-<div class="subtext">
-Your Tego ID
-</div>
+<label>
+Tego ID
+</label>
 
 <div
 id="tego-id"
-class="name mt-10"
+class="readonly-box"
 >
 Generating...
 </div>
 
-</div>
-
 <button
 id="save-profile"
-class="btn mt-20"
+class="btn"
 >
 Continue
 </button>
@@ -96,172 +107,14 @@ Continue
 </div>
 
 <script>
-
-let avatarFile = null;
-
-const avatarInput =
-document.getElementById(
-"avatar"
-);
-
-const avatarPreview =
-document.getElementById(
-"avatar-preview"
-);
-
-const tegoIdElement =
-document.getElementById(
-"tego-id"
-);
-
-const saveButton =
-document.getElementById(
-"save-profile"
-);
-
-const generatedTegoId =
-generateTegoId();
-
-tegoIdElement.textContent =
-generatedTegoId;
-
-avatarInput.addEventListener(
-"change",
-e => {
-
-const file =
-e.target.files[0];
-
-if(!file) return;
-
-avatarFile = file;
-
-avatarPreview.src =
-URL.createObjectURL(file);
-
-}
-);
-
-function generateTegoId(){
-
-const a =
-Math.random()
-.toString(36)
-.substring(2,6)
-.toUpperCase();
-
-const b =
-Math.random()
-.toString(36)
-.substring(2,6)
-.toUpperCase();
-
-return `TEGO-${a}-${b}`;
-
-}
-
-saveButton.addEventListener(
-"click",
+document.addEventListener(
+"DOMContentLoaded",
 async () => {
 
-const username =
-document
-.getElementById(
-"username"
-)
-.value
-.trim()
-.toLowerCase();
-
-const displayName =
-document
-.getElementById(
-"display-name"
-)
-.value
-.trim();
-
-const bio =
-document
-.getElementById(
-"bio"
-)
-.value
-.trim();
-
-if(
-!username ||
-!displayName
-){
-showToast(
-"Complete all required fields"
-);
-return;
-}
-
-try{
-
-saveButton.disabled = true;
-
-saveButton.textContent =
-"Saving...";
-
-const user =
-await getCurrentUser();
-
-let avatarUrl = null;
-
-if(avatarFile){
-
-avatarUrl =
-await uploadAvatar(
-avatarFile
-);
+await initProfilePage();
 
 }
-
-await createProfile({
-
-auth_id:user.id,
-
-username:username,
-
-tego_id:generatedTegoId,
-
-display_name:displayName,
-
-avatar_url:avatarUrl,
-
-bio:bio
-
-});
-
-showToast(
-"Profile created"
 );
-
-setTimeout(() => {
-
-window.location.href =
-"chats.html";
-
-},800);
-
-}catch(error){
-
-showToast(
-error.message ||
-"Profile creation failed"
-);
-
-saveButton.disabled = false;
-
-saveButton.textContent =
-"Continue";
-
-}
-
-});
 </script>
 
 </body>
