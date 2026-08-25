@@ -407,7 +407,26 @@ ${message.file_name || "Download File"}
                 body =
                 escapeHtml(
                     message.message || ""
-                );
+                )
+                    function getStatusIcon(
+status
+){
+
+if(
+status === "read"
+){
+return "✓✓";
+}
+
+if(
+status === "delivered"
+){
+return "✓✓";
+}
+
+return "✓";
+
+};
 
             }
 
@@ -417,11 +436,27 @@ ${message.file_name || "Download File"}
                 ${body}
             </div>
 
-            <div class="message-time">
-                ${formatTime(
-                    message.created_at
-                )}
-            </div>
+       <div class="message-footer">
+
+<div class="message-time">
+${formatTime(
+message.created_at
+)}
+</div>
+
+${
+mine
+? `
+<div class="message-status">
+${getStatusIcon(
+message.status
+)}
+</div>
+`
+: ""
+}
+
+</div>
 
             `;
 ${
