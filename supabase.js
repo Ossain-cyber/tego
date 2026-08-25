@@ -626,6 +626,8 @@ throw error;
 }
 
     }
+window.deleteMessage =
+deleteMessage;
 window.isUsernameAvailable = isUsernameAvailable;
 window.isTegoIdAvailable = isTegoIdAvailable;
 window.updateLastSeen = updateLastSeen;
