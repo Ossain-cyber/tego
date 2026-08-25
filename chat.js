@@ -393,8 +393,24 @@ async function uploadAndSendMedia(
     event
 ) {
 
-    const file =
-    event.target.files[0];
+    const MAX_FILE_SIZE =
+5 * 1024 * 1024;
+
+if(
+file.size >
+MAX_FILE_SIZE
+){
+
+showToast(
+"Maximum file size is 5MB"
+);
+
+event.target.value =
+"";
+
+return;
+
+}
 
     if (!file) {
         return;
