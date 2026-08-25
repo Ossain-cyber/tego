@@ -91,18 +91,22 @@ async function loadChats() {
             .from("messages")
             .select("*")
             .or(
-                `sender_tego_id.eq.${contact.contact_tego_id},receiver_tego_id.eq.${contact.contact_tego_id}`
+                `and(sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${contact.contact_tego_id}),and(sender_tego_id.eq.${contact.contact_tego_id},receiver_tego_id.eq.${currentProfile.tego_id})`
             )
             .order(
                 "created_at",
                 {
-                    ascending:false
+                    ascending: false
                 }
             )
             .limit(1);
 
             if (error) {
+
+                console.error(error);
+
                 continue;
+
             }
 
             const lastMessage =
@@ -119,7 +123,7 @@ async function loadChats() {
         }
 
         conversations.sort(
-            (a,b) => {
+            (a, b) => {
 
                 const aTime =
                 a.lastMessage
@@ -129,11 +133,9 @@ async function loadChats() {
                 b.lastMessage
                 ?.created_at || "";
 
-                return new Date(
-                    bTime
-                ) -
-                new Date(
-                    aTime
+                return (
+                    new Date(bTime) -
+                    new Date(aTime)
                 );
 
             }
@@ -147,6 +149,8 @@ async function loadChats() {
         );
 
     } catch (error) {
+
+        console.error(error);
 
         showToast(
             "Unable to load chats"
@@ -187,6 +191,7 @@ function renderChats(
         }
 
         return;
+
     }
 
     if (empty) {
@@ -242,9 +247,7 @@ function renderChats(
 
             </div>
 
-            <div
-            class="subtext"
-            >
+            <div class="subtext">
                 ${lastTime}
             </div>
 
@@ -283,17 +286,23 @@ function getLastMessageText(
     }
 
     if (
+        message.deleted_at
+    ) {
+        return "Message deleted";
+    }
+
+    if (
         message.message_type ===
         "image"
     ) {
-        return "Photo";
+        return "📷 Photo";
     }
 
     if (
         message.message_type ===
         "file"
     ) {
-        return "File";
+        return "📎 File";
     }
 
     return (
@@ -305,12 +314,17 @@ function getLastMessageText(
 
 function searchChats() {
 
-    const query =
-    document
-    .getElementById(
+    const input =
+    document.getElementById(
         "chat-search"
-    )
-    .value
+    );
+
+    if (!input) {
+        return;
+    }
+
+    const query =
+    input.value
     .trim()
     .toLowerCase();
 
@@ -321,13 +335,14 @@ function searchChats() {
         );
 
         return;
+
     }
 
     const filtered =
     chatItems.filter(
         chat => {
 
-            const text =
+            const name =
             (
                 chat.nickname ||
                 chat.contact_username ||
@@ -335,7 +350,7 @@ function searchChats() {
             )
             .toLowerCase();
 
-            return text.includes(
+            return name.includes(
                 query
             );
 
