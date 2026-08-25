@@ -296,11 +296,26 @@ async function loadContactsList() {
         myContacts =
         await getContacts();
 
+        console.log(
+            "Contacts:",
+            myContacts
+        );
+
         renderContacts(
             myContacts
         );
 
-    } catch {
+    } catch (error) {
+
+        console.error(
+            "Contacts error:",
+            error
+        );
+
+        alert(
+            error?.message ||
+            JSON.stringify(error)
+        );
 
         showToast(
             "Unable to load contacts"
@@ -309,7 +324,6 @@ async function loadContactsList() {
     }
 
 }
-
 function renderContacts(
     contacts
 ) {
