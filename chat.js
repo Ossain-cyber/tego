@@ -44,7 +44,20 @@ async function initChatPage() {
 }
 
 function setupChatHeader() {
+const avatar =
+document.getElementById(
+    "chat-avatar"
+);
 
+if (
+    avatar &&
+    activeChat.avatar_url
+) {
+
+    avatar.src =
+    activeChat.avatar_url;
+
+}
     const name =
     document.getElementById(
         "chat-name"
