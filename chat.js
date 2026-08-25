@@ -1,3 +1,4 @@
+let replyingTo = null;
 let activeChat = null;
 let currentProfile = null;
 let messagesChannel = null;
@@ -206,6 +207,31 @@ if (
 }
 
 function bindChatEvents() {
+    const cancelReply =
+document.getElementById(
+"cancel-reply"
+);
+
+if(cancelReply){
+
+cancelReply.addEventListener(
+"click",
+() => {
+
+replyingTo = null;
+
+document
+.getElementById(
+"reply-preview"
+)
+.classList.add(
+"hidden"
+);
+
+}
+);
+
+}
 
     const sendBtn =
     document.getElementById(
@@ -333,6 +359,12 @@ function renderMessages(
     document.getElementById(
         "messages"
     );
+    <button
+class="reply-btn"
+data-id="${message.id}"
+>
+Reply
+</button>
 
     if (!container) {
         return;
@@ -363,7 +395,15 @@ function renderMessages(
             if(
 message.deleted_at
 ){
-
+${
+message.reply_text
+? `
+<div class="reply-bubble">
+${message.reply_text}
+</div>
+`
+: ""
+}
 body =
 '<i>Message deleted</i>';
 
@@ -455,6 +495,40 @@ Delete
 `
 : ""
                 }
+                const replyBtn =
+item.querySelector(
+".reply-btn"
+);
+
+if(replyBtn){
+
+replyBtn.addEventListener(
+"click",
+() => {
+
+replyingTo =
+message;
+
+document
+.getElementById(
+"reply-preview"
+)
+.classList.remove(
+"hidden"
+);
+
+document
+.getElementById(
+"reply-text"
+)
+.textContent =
+message.message ||
+"Media";
+
+}
+);
+
+}
 
        <div class="message-footer">
 
@@ -521,6 +595,8 @@ message.id
 }
 
 async function sendTextMessage() {
+    
+
 
     const input =
     document.getElementById(
@@ -539,7 +615,12 @@ async function sendTextMessage() {
         input.value = "";
 
         await sendMessage({
+reply_to_id:
+replyingTo?.id || null,
 
+reply_text:
+replyingTo?.message || null,
+    replyingTo = null;
     sender_id:
     APP.user.id,
 
@@ -548,7 +629,14 @@ async function sendTextMessage() {
 
     sender_tego_id:
     currentProfile.tego_id,
-
+    
+document
+.getElementById(
+"reply-preview"
+)
+.classList.add(
+"hidden"
+);
     receiver_tego_id:
     activeChat.contact_tego_id,
 
