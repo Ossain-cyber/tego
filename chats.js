@@ -110,15 +110,43 @@ async function loadChats() {
             }
 
             const lastMessage =
-            data?.[0] || null;
+data?.[0] || null;
 
-            conversations.push({
+const {
+count
+} =
+await APP.supabase
+.from("messages")
+.select(
+"*",
+{
+count:"exact",
+head:true
+}
+)
+.eq(
+"sender_tego_id",
+contact.contact_tego_id
+)
+.eq(
+"receiver_tego_id",
+currentProfile.tego_id
+)
+.neq(
+"status",
+"read"
+);
 
-                ...contact,
+conversations.push({
 
-                lastMessage
+    ...contact,
 
-            });
+    lastMessage,
+
+    unreadCount:
+    count || 0
+
+});
 
         }
 
@@ -303,12 +331,17 @@ function renderChats(
 ${lastTime}
 </div>
 
+${
+chat.unreadCount > 0
+? `
 <div class="badge">
-1
+${chat.unreadCount}
 </div>
+`
+: ""
+}
 
 </div>
-
         </div>
 
         <div class="chat-message">
