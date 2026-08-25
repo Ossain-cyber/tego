@@ -360,10 +360,18 @@ function renderMessages(
             let body =
             "";
 
-            if (
-                message.message_type ===
-                "image"
-            ) {
+            if(
+message.deleted_at
+){
+
+body =
+'<i>Message deleted</i>';
+
+}
+else if(
+message.message_type ===
+"image"
+){
 
                 body = `
 <img
@@ -435,6 +443,18 @@ return "✓";
             <div class="message-body">
                 ${body}
             </div>
+            ${
+mine
+? `
+<button
+class="delete-message-btn"
+data-id="${message.id}"
+>
+Delete
+</button>
+`
+: ""
+                }
 
        <div class="message-footer">
 
@@ -476,39 +496,25 @@ Delete
             );
             const deleteBtn =
 item.querySelector(
-".delete-msg"
+".delete-message-btn"
 );
 
 if(deleteBtn){
 
 deleteBtn.addEventListener(
 "click",
-async e => {
+async event => {
 
-e.stopPropagation();
-
-const confirmed =
-confirm(
-"Delete this message?"
-);
-
-if(!confirmed){
-return;
-}
+event.stopPropagation();
 
 await deleteMessage(
 message.id
 );
 
-await loadConversation();
-
 }
 );
 
 }
-
-        }
-    );
 
     scrollMessagesToBottom();
 
@@ -892,6 +898,40 @@ currentProfile.tego_id
 );
 
 }
+    async function deleteMessage(
+messageId
+){
+
+try{
+
+await APP.supabase
+.from("messages")
+.update({
+
+message:
+"Message deleted",
+
+deleted_at:
+new Date()
+.toISOString()
+
+})
+.eq(
+"id",
+messageId
+);
+
+await loadConversation();
+
+}catch{
+
+showToast(
+"Delete failed"
+);
+
+}
+
+    }
 
 window.initChatPage =
 initChatPage;
