@@ -663,3 +663,21 @@ color:white;
 font-size:20px;
 font-weight:700;
   }
+.chat-image{
+max-width:220px;
+max-height:280px;
+border-radius:16px;
+display:block;
+}
+
+.message-body{
+overflow:hidden;
+}
+
+.file-link{
+display:inline-block;
+padding:10px 14px;
+background:#1f2937;
+border-radius:12px;
+color:white;
+}
