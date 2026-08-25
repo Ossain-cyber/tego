@@ -608,7 +608,24 @@ async function getProfileByTegoId(tegoId) {
     }
     return data;
 }
+async function deleteMessage(
+messageId
+){
 
+const { error } =
+await APP.supabase
+.from("messages")
+.delete()
+.eq(
+"id",
+messageId
+);
+
+if(error){
+throw error;
+}
+
+    }
 window.isUsernameAvailable = isUsernameAvailable;
 window.isTegoIdAvailable = isTegoIdAvailable;
 window.updateLastSeen = updateLastSeen;
