@@ -7,9 +7,12 @@ async function initProfilePage() {
     await getCurrentSession();
 
     if (!session) {
+
         window.location.href =
         "login.html";
+
         return;
+
     }
 
     bindProfileEvents();
@@ -48,7 +51,9 @@ function bindProfileEvents() {
 
     }
 
-}async function loadExistingProfile() {
+}
+
+async function loadExistingProfile() {
 
     const profile =
     await getMyProfile();
@@ -63,9 +68,7 @@ function bindProfileEvents() {
             "bio"
         );
 
-        if (
-            bioField
-        ) {
+        if (bioField) {
 
             bioField.value =
             profile.bio || "";
@@ -144,7 +147,6 @@ function bindProfileEvents() {
 
 }
 
-
 function handleAvatarChange(
     event
 ) {
@@ -198,7 +200,9 @@ async function generateUniqueTegoId() {
         );
 
         if (available) {
+
             return candidate;
+
         }
 
     }
@@ -209,8 +213,10 @@ async function usernameAvailable(
     username
 ) {
 
-    const { data, error } =
-    await APP.supabase
+    const {
+        data,
+        error
+    } = await APP.supabase
     .from("profiles")
     .select("id")
     .eq(
@@ -219,14 +225,18 @@ async function usernameAvailable(
     );
 
     if (error) {
+
         throw error;
+
     }
 
     if (
         !data ||
         data.length === 0
     ) {
+
         return true;
+
     }
 
     const profile =
@@ -236,7 +246,9 @@ async function usernameAvailable(
         profile &&
         profile.username === username
     ) {
+
         return true;
+
     }
 
     return false;
@@ -267,16 +279,18 @@ async function saveProfile() {
     .value
     .trim();
 
+    const bio =
+    document
+    .getElementById(
+        "bio"
+    )
+    .value
+    .trim();
+
     if (
         !username ||
         !displayName
-    ) const bio =
-document
-.getElementById(
-    "bio"
-)
-.value
-.trim();{
+    ) {
 
         showToast(
             "Complete all fields"
@@ -329,28 +343,20 @@ document
 
         if (existing) {
 
-            const bio =
-document
-.getElementById(
-"bio"
-)
-.value
-.trim();
+            const updateData = {
 
-const updateData = {
+                username,
 
-    username,
+                display_name:
+                displayName,
 
-    display_name:
-    displayName,
+                bio,
 
-    bio,
+                updated_at:
+                new Date()
+                .toISOString()
 
-    updated_at:
-    new Date()
-    .toISOString()
-
-};
+            };
 
             if (
                 avatarUrl
@@ -369,23 +375,23 @@ const updateData = {
 
             await createProfile({
 
-    auth_id:
-    user.id,
+                auth_id:
+                user.id,
 
-    username,
+                username,
 
-    display_name:
-    displayName,
+                display_name:
+                displayName,
 
-    avatar_url:
-    avatarUrl,
+                avatar_url:
+                avatarUrl,
 
-    bio,
+                bio,
 
-    tego_id:
-    generatedTegoId
+                tego_id:
+                generatedTegoId
 
-});
+            });
 
         }
 
