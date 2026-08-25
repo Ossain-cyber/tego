@@ -704,3 +704,15 @@ margin-top:4px;
 font-size:11px;
 opacity:.8;
           }
+.delete-message-btn{
+margin-top:6px;
+background:none;
+border:none;
+font-size:12px;
+opacity:.7;
+color:#fff;
+}
+
+.delete-message-btn:active{
+opacity:1;
+  }
