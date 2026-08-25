@@ -223,37 +223,47 @@ function renderChats(
 
         card.innerHTML = `
 
-        <div class="list-item">
+<div class="chat-row">
 
-            <img
-            class="avatar"
-            src="icon-192.png"
-            alt=""
-            >
+    <img
+    class="avatar"
+    src="${
+        chat.avatar_url ||
+        generateAvatar(
+            chat.nickname ||
+            chat.contact_username ||
+            "T"
+        )
+    }"
+    >
 
-            <div class="info">
+    <div class="chat-main">
 
-                <div class="name">
-                    ${
-                        chat.nickname ||
-                        chat.contact_username ||
-                        "Unknown"
-                    }
-                </div>
+        <div class="chat-top">
 
-                <div class="subtext">
-                    ${lastText}
-                </div>
-
+            <div class="chat-name">
+                ${
+                    chat.nickname ||
+                    chat.contact_username ||
+                    "Unknown"
+                }
             </div>
 
-            <div class="subtext">
+            <div class="chat-time">
                 ${lastTime}
             </div>
 
         </div>
 
-        `;
+        <div class="chat-message">
+            ${lastText}
+        </div>
+
+    </div>
+
+</div>
+
+`;
 
         card.addEventListener(
             "click",
