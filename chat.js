@@ -869,6 +869,29 @@ window.addEventListener(
 
     }
 );
+async function markMessagesRead(
+senderTegoId
+){
+
+await APP.supabase
+.from("messages")
+.update({
+status:"read"
+})
+.eq(
+"sender_tego_id",
+senderTegoId
+)
+.eq(
+"receiver_tego_id",
+currentProfile.tego_id
+)
+.neq(
+"status",
+"read"
+);
+
+}
 
 window.initChatPage =
 initChatPage;
