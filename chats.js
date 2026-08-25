@@ -248,7 +248,55 @@ function renderChats(
                     "Unknown"
                 }
             </div>
+<div class="info">
 
+    <div
+    style="
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    "
+    >
+
+        <div class="name">
+            ${
+                chat.nickname ||
+                chat.contact_username ||
+                "Unknown"
+            }
+        </div>
+
+        ${
+            chat.unread_count > 0
+            ? `
+            <span
+            style="
+            background:#2563eb;
+            color:white;
+            min-width:22px;
+            height:22px;
+            border-radius:50%;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:12px;
+            font-weight:700;
+            "
+            >
+            ${chat.unread_count}
+            </span>
+            `
+            : ""
+        }
+
+    </div>
+
+    <div class="subtext">
+        ${lastText}
+    </div>
+
+</div>
             <div>
 
 <div class="subtext">
