@@ -249,9 +249,17 @@ function renderChats(
                 }
             </div>
 
-            <div class="chat-time">
-                ${lastTime}
-            </div>
+            <div>
+
+<div class="subtext">
+${lastTime}
+</div>
+
+<div class="badge">
+1
+</div>
+
+</div>
 
         </div>
 
