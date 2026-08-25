@@ -279,10 +279,53 @@ ${message.file_name || "Download File"}
             </div>
 
             `;
-
+${
+mine
+? `
+<button
+class="delete-msg"
+data-id="${message.id}"
+>
+Delete
+</button>
+`
+: ""
+        }
             container.appendChild(
                 item
             );
+            const deleteBtn =
+item.querySelector(
+".delete-msg"
+);
+
+if(deleteBtn){
+
+deleteBtn.addEventListener(
+"click",
+async e => {
+
+e.stopPropagation();
+
+const confirmed =
+confirm(
+"Delete this message?"
+);
+
+if(!confirmed){
+return;
+}
+
+await deleteMessage(
+message.id
+);
+
+await loadConversation();
+
+}
+);
+
+}
 
         }
     );
