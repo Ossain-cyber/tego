@@ -18,102 +18,120 @@
 
 <div class="page">
 
-<div class="topbar">
-<div class="topbar-title">
-Profile
-</div>
-</div>
+    <div class="topbar">
+        <div class="topbar-title">
+            Profile
+        </div>
+    </div>
 
-<div class="container">
+    <div class="container">
 
-<div class="card">
+        <div class="card">
 
-<div class="profile-center">
+            <div class="center" style="flex-direction:column;">
 
-<img
-id="avatar-preview"
-src="icon-192.png"
-class="avatar-xl"
-alt="Avatar"
->
+                <img
+                id="avatar-preview"
+                src="icon-192.png"
+                alt="Avatar"
+                >
 
-<input
-type="file"
-id="avatar"
-accept="image/*"
->
+                <input
+                type="file"
+                id="avatar"
+                accept="image/*"
+                >
 
-</div>
+            </div>
 
-</div>
+        </div>
 
-<div class="card">
+        <div class="card">
 
-<label>
-Display Name
-</label>
+            <div class="input-group">
+                <label for="display-name">
+                    Display Name
+                </label>
 
-<input
-type="text"
-id="display-name"
-placeholder="Your name"
-maxlength="40"
->
+                <input
+                type="text"
+                id="display-name"
+                class="input"
+                placeholder="Your name"
+                maxlength="40"
+                >
+            </div>
 
-<label>
-Username
-</label>
+            <div class="input-group">
+                <label for="username">
+                    Username
+                </label>
 
-<input
-type="text"
-id="username"
-placeholder="username"
-maxlength="20"
->
+                <input
+                type="text"
+                id="username"
+                class="input"
+                placeholder="username"
+                maxlength="20"
+                >
+            </div>
 
-<label>
-Bio
-</label>
+            <div class="input-group">
+                <label for="bio">
+                    Bio
+                </label>
 
-<textarea
-id="bio"
-placeholder="Tell people about yourself"
-maxlength="160"
-rows="4"
-></textarea>
+                <textarea
+                id="bio"
+                class="textarea"
+                placeholder="Tell people about yourself"
+                maxlength="160"
+                rows="4"
+                ></textarea>
+            </div>
 
-<label>
-Tego ID
-</label>
+            <div class="input-group">
 
-<div
-id="tego-id"
-class="readonly-box"
->
-Generating...
-</div>
+                <label>
+                    Tego ID
+                </label>
 
-<button
-id="save-profile"
-class="btn"
->
-Continue
-</button>
+                <div
+                id="tego-id"
+                class="card"
+                style="
+                margin-top:8px;
+                padding:14px;
+                text-align:center;
+                font-weight:700;
+                "
+                >
+                    Generating...
+                </div>
 
-</div>
+            </div>
 
-</div>
+            <button
+            id="save-profile"
+            class="btn mt-20"
+            >
+                Continue
+            </button>
+
+        </div>
+
+    </div>
 
 </div>
 
 <script>
 document.addEventListener(
-"DOMContentLoaded",
-async () => {
+    "DOMContentLoaded",
+    async () => {
 
-await initProfilePage();
+        await initProfilePage();
 
-}
+    }
 );
 </script>
 
