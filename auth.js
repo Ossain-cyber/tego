@@ -202,7 +202,28 @@ function clearActiveChat(){
     );
 
 }
+async function requireAuth() {
 
+    const session =
+    await getCurrentSession();
+
+    if (!session) {
+
+        window.location.href =
+        "login.html";
+
+        return false;
+
+    }
+
+    APP.user =
+    session.user;
+
+    return true;
+}
+
+window.requireAuth =
+requireAuth;
 window.login = login;
 window.register = register;
 window.logoutUser = logoutUser;
