@@ -48,23 +48,8 @@ function bindProfileEvents() {
 
     }
 
-}
+}async function loadExistingProfile() {
 
-async function loadExistingProfile() {
-const bioField =
-document.getElementById(
-"bio"
-);
-
-if(
-bioField &&
-profile.bio
-){
-
-    bioField.value =
-    profile.bio;
-
-}
     const profile =
     await getMyProfile();
 
@@ -73,14 +58,30 @@ profile.bio
         generatedTegoId =
         profile.tego_id;
 
+        const bioField =
+        document.getElementById(
+            "bio"
+        );
+
+        if (
+            bioField
+        ) {
+
+            bioField.value =
+            profile.bio || "";
+
+        }
+
         const tegaElement =
         document.getElementById(
             "tego-id"
         );
 
         if (tegaElement) {
+
             tegaElement.textContent =
             profile.tego_id;
+
         }
 
         const username =
@@ -89,8 +90,10 @@ profile.bio
         );
 
         if (username) {
+
             username.value =
             profile.username || "";
+
         }
 
         const displayName =
@@ -99,8 +102,10 @@ profile.bio
         );
 
         if (displayName) {
+
             displayName.value =
             profile.display_name || "";
+
         }
 
         const avatar =
@@ -138,6 +143,7 @@ profile.bio
     }
 
 }
+
 
 function handleAvatarChange(
     event
@@ -264,7 +270,13 @@ async function saveProfile() {
     if (
         !username ||
         !displayName
-    ) {
+    ) const bio =
+document
+.getElementById(
+    "bio"
+)
+.value
+.trim();{
 
         showToast(
             "Complete all fields"
