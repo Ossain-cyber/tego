@@ -395,7 +395,76 @@ justify-content:center;
 .mb-10{margin-bottom:10px;}
 .mb-15{margin-bottom:15px;}
 .mb-20{margin-bottom:20px;}
+/* Profile Avatar */
 
+#avatar-preview{
+width:120px;
+height:120px;
+border-radius:50%;
+object-fit:cover;
+display:block;
+margin:0 auto 16px;
+background:var(--surface-2);
+border:3px solid var(--primary);
+}
+
+/* Splash Logo */
+
+.logo{
+width:120px;
+height:120px;
+margin:auto;
+overflow:hidden;
+border-radius:28px;
+background:linear-gradient(
+135deg,
+var(--primary),
+var(--primary-light)
+);
+display:flex;
+align-items:center;
+justify-content:center;
+box-shadow:0 0 35px rgba(
+37,
+99,
+235,
+.45
+);
+}
+
+.logo img{
+width:100%;
+height:100%;
+object-fit:cover;
+border-radius:28px;
+}
+
+/* Chat Images */
+
+.chat-image{
+max-width:220px;
+max-height:280px;
+border-radius:16px;
+object-fit:cover;
+display:block;
+}
+
+/* File Input */
+
+input[type="file"]{
+width:100%;
+margin-top:10px;
+color:var(--text-soft);
+}
+
+/* Profile Form Labels */
+
+label{
+display:block;
+margin-bottom:6px;
+font-weight:600;
+color:var(--text);
+}
 @media (min-width:768px){
 
 .container{
