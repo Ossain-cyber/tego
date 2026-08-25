@@ -298,27 +298,29 @@ async function sendTextMessage() {
 
         await sendMessage({
 
-            sender_id:
-            APP.user.id,
+    sender_id:
+    APP.user.id,
 
-            receiver_id:
-            activeChat.contact_auth_id,
+    receiver_id:
+    activeChat.contact_auth_id,
 
-            sender_tego_id:
-            currentProfile.tego_id,
+    sender_tego_id:
+    currentProfile.tego_id,
 
-            receiver_tego_id:
-            activeChat.contact_tego_id,
+    receiver_tego_id:
+    activeChat.contact_tego_id,
 
-            message:
-            text,
+    message:
+    text,
 
-            message_type:
-            "text",
+    message_type:
+    "text",
 
-            status:"delivered"
+    status:"delivered"
 
-        });
+});
+
+await loadConversation();
 
     } catch {
 
@@ -379,7 +381,7 @@ mime_type:
 file.type
 
 });
-
+await loadConversation();
         event.target.value =
         "";
 
@@ -406,13 +408,25 @@ function subscribeRealtimeMessages() {
                 return;
             }
 
-            const senderMatch =
-            row.sender_id ===
-            activeChat.contact_auth_id;
+            const isCurrentChat =
 
-            const receiverMatch =
-            row.receiver_id ===
-            activeChat.contact_auth_id;
+(
+    row.sender_id === APP.user.id &&
+    row.receiver_id === activeChat.contact_auth_id
+)
+
+||
+
+(
+    row.sender_id === activeChat.contact_auth_id &&
+    row.receiver_id === APP.user.id
+);
+
+if (isCurrentChat) {
+
+    await loadConversation();
+
+}
 
             if (
                 senderMatch ||
