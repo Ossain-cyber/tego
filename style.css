@@ -681,3 +681,10 @@ background:#1f2937;
 border-radius:12px;
 color:white;
 }
+.delete-msg{
+margin-top:6px;
+background:none;
+color:#ef4444;
+font-size:11px;
+border:none;
+  }
