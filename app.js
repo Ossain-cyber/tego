@@ -245,6 +245,21 @@ function getActiveChat() {
     }
 
 }
+function saveActiveChat(
+    contact
+) {
+
+    localStorage.setItem(
+        "activeChat",
+        JSON.stringify(
+            contact
+        )
+    );
+
+}
+
+window.saveActiveChat =
+saveActiveChat;
 window.getActiveChat =
 getActiveChat;
 window.APP = APP;
