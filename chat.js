@@ -1,6 +1,14 @@
 let activeChat = null;
 let currentProfile = null;
 let messagesChannel = null;
+let mediaRecorder =
+null;
+
+let audioChunks =
+[];
+
+let isRecording =
+false;
 async function compressImage(file){
 
 return new Promise(
@@ -146,7 +154,19 @@ async function initChatPage() {
 
     setupChatHeader();
 
-    bindChatEvents();
+    bindChatEvents(const recordBtn =
+document.getElementById(
+"record-btn"
+);
+
+if(recordBtn){
+
+recordBtn.addEventListener(
+"click",
+toggleRecording
+);
+
+});
 
     await loadConversation();
 
@@ -353,7 +373,21 @@ loading="lazy"
 >
 `;
 
-            } else if (
+            } 
+            if(
+message.mime_type ===
+"audio/webm"
+){
+
+body = `
+<audio
+controls
+src="${message.media_url}">
+</audio>
+`;
+
+        }
+            else if (
                 message.message_type ===
                 "file"
             ) {
@@ -636,6 +670,111 @@ if (isCurrentChat) {
 
         }
     );
+
+}
+async function toggleRecording(){
+
+const button =
+document.getElementById(
+"record-btn"
+);
+
+if(!isRecording){
+
+const stream =
+await navigator
+.mediaDevices
+.getUserMedia({
+audio:true
+});
+
+audioChunks = [];
+
+mediaRecorder =
+new MediaRecorder(
+stream
+);
+
+mediaRecorder.ondataavailable =
+event=>{
+
+audioChunks.push(
+event.data
+);
+
+};
+
+mediaRecorder.onstop =
+async ()=>{
+
+const blob =
+new Blob(
+audioChunks,
+{
+type:"audio/webm"
+}
+);
+
+const file =
+new File(
+[blob],
+`voice-${Date.now()}.webm`,
+{
+type:"audio/webm"
+}
+);
+
+const url =
+await uploadMedia(
+file
+);
+
+await sendMediaMessage({
+
+receiver_id:
+activeChat.contact_auth_id,
+
+sender_tego_id:
+currentProfile.tego_id,
+
+receiver_tego_id:
+activeChat.contact_tego_id,
+
+media_url:url,
+
+file_name:file.name,
+
+mime_type:"audio/webm"
+
+});
+
+};
+
+mediaRecorder.start();
+
+isRecording = true;
+
+button.classList.add(
+"recording"
+);
+
+button.textContent =
+"■";
+
+}else{
+
+mediaRecorder.stop();
+
+isRecording = false;
+
+button.classList.remove(
+"recording"
+);
+
+button.textContent =
+"🎤";
+
+}
 
 }
 
