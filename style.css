@@ -348,6 +348,18 @@ display:flex;
 align-items:center;
 justify-content:space-around;
 z-index:100;
+  .nav-btn{
+background:none;
+border:none;
+color:var(--text-soft);
+font-size:12px;
+padding:8px;
+}
+
+.nav-btn.active{
+color:var(--primary-light);
+font-weight:700;
+  }
 }
 
 .nav-item{
