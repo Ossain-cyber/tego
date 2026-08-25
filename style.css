@@ -716,3 +716,37 @@ color:#fff;
 .delete-message-btn:active{
 opacity:1;
   }
+.reply-preview{
+padding:10px 14px;
+background:#1f2937;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.reply-text{
+font-size:13px;
+opacity:.8;
+max-width:80%;
+overflow:hidden;
+text-overflow:ellipsis;
+white-space:nowrap;
+}
+
+.reply-bubble{
+padding:6px 10px;
+margin-bottom:6px;
+border-left:3px solid #2563eb;
+background:rgba(255,255,255,.05);
+font-size:12px;
+opacity:.9;
+}
+
+.reply-btn{
+background:none;
+border:none;
+font-size:12px;
+opacity:.7;
+margin-top:4px;
+color:#fff;
+  }
