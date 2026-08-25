@@ -332,6 +332,7 @@ async function sendTextMessage() {
     status:"delivered"
 
 });
+        scrollMessagesToBottom();
 
 await loadConversation();
 
