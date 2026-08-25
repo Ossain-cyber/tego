@@ -692,3 +692,15 @@ border:none;
 background:#ef4444 !important;
 color:white;
   }
+.message-footer{
+display:flex;
+justify-content:flex-end;
+align-items:center;
+gap:6px;
+margin-top:4px;
+}
+
+.message-status{
+font-size:11px;
+opacity:.8;
+          }
