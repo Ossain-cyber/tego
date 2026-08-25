@@ -172,16 +172,32 @@ return true;
 
 async function getContacts() {
 
-const { data, error } = await APP.supabase  
-    .from("contacts")  
-    .select("*")  
-    .order("created_at", {  
-        ascending: false  
-    });  
+    const {
+        data,
+        error
+    } = await APP.supabase
+    .from("contacts")
+    .select("*")
+    .eq(
+        "owner_id",
+        APP.user.id
+    )
+    .order(
+        "created_at",
+        {
+            ascending:false
+        }
+    );
 
-if (error) throw error;  
+    if (error) {
 
-return data || [];
+        console.error(error);
+
+        throw error;
+
+    }
+
+    return data || [];
 
 }
 
