@@ -1,7 +1,118 @@
 let activeChat = null;
 let currentProfile = null;
 let messagesChannel = null;
+async function compressImage(file){
 
+return new Promise(
+(resolve,reject)=>{
+
+const reader =
+new FileReader();
+
+reader.onload = e => {
+
+const img =
+new Image();
+
+img.onload = ()=>{
+
+let width =
+img.width;
+
+let height =
+img.height;
+
+const MAX =
+1280;
+
+if(
+width > MAX ||
+height > MAX
+){
+
+if(width > height){
+
+height =
+height *
+(MAX/width);
+
+width = MAX;
+
+}else{
+
+width =
+width *
+(MAX/height);
+
+height = MAX;
+
+}
+
+}
+
+const canvas =
+document.createElement(
+"canvas"
+);
+
+canvas.width =
+width;
+
+canvas.height =
+height;
+
+const ctx =
+canvas.getContext(
+"2d"
+);
+
+ctx.drawImage(
+img,
+0,
+0,
+width,
+height
+);
+
+canvas.toBlob(
+
+blob=>{
+
+resolve(
+new File(
+[blob],
+file.name,
+{
+type:"image/jpeg"
+}
+)
+);
+
+},
+
+"image/jpeg",
+0.7
+
+);
+
+};
+
+img.src =
+e.target.result;
+
+};
+
+reader.onerror =
+reject;
+
+reader.readAsDataURL(
+file
+);
+
+}
+);
+
+}
 async function initChatPage() {
 
     const authenticated =
@@ -392,7 +503,20 @@ await loadConversation();
 async function uploadAndSendMedia(
     event
 ) {
+let file =
+event.target.files[0];
+    if(
+file.type.startsWith(
+"image/"
+)
+){
 
+file =
+await compressImage(
+file
+);
+
+            }
     const MAX_FILE_SIZE =
 5 * 1024 * 1024;
 
