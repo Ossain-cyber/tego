@@ -23,7 +23,7 @@
 <button
 type="button"
 class="back-btn"
-onclick="openChats()"
+onclick="window.location.href='chats.html'"
 >
 ←
 </button>
@@ -64,11 +64,15 @@ id="messages"
 class="messages"
 >
 
-<div class="empty-state">
+<div
+id="empty-state"
+class="empty-state"
+>
 No messages yet
 </div>
 
 </main>
+
 <div
 id="reply-preview"
 class="reply-preview hidden"
@@ -83,11 +87,13 @@ class="reply-text"
 <button
 type="button"
 id="cancel-reply"
+class="reply-close"
 >
 ✕
 </button>
 
-  </div>
+</div>
+
 <div class="chat-composer">
 
 <input
@@ -100,9 +106,10 @@ hidden
 type="button"
 id="media-btn"
 class="composer-btn"
+title="Attach"
 >
 📎
-  </button>
+</button>
 
 <input
 type="text"
@@ -110,17 +117,21 @@ id="message-input"
 placeholder="Type a message"
 autocomplete="off"
 >
+
 <button
 type="button"
 id="record-btn"
 class="composer-btn"
+title="Voice Note"
 >
 🎤
-                  </button>
+</button>
+
 <button
 type="button"
 id="send-btn"
 class="send-btn"
+title="Send"
 >
 ➤
 </button>
