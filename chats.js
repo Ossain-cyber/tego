@@ -4,6 +4,7 @@
 let chatItems = [];
 let currentProfile = null;
 let chatUpdateTimeout = null;
+let isFirstLoad = true;
 
 // ============================================
 // DOM CACHE
@@ -38,28 +39,67 @@ async function initChatsPage() {
 
         // Load chats immediately
         await loadChats();
+        isFirstLoad = false;
 
-        // Subscribe to both messages AND contacts changes
-        subscribeMessages(async () => {
-            await loadChats();
-        });
-
-        // Also subscribe to contact changes
-        if (typeof subscribeContacts === 'function') {
-            subscribeContacts(async () => {
+        // Subscribe to messages
+        if (typeof subscribeMessages === 'function') {
+            subscribeMessages(async () => {
+                console.log("Messages changed, refreshing chats...");
                 await loadChats();
             });
         }
 
-        // Listen for visibility change to refresh when user returns to tab
+        // Subscribe to contacts changes
+        if (typeof subscribeContacts === 'function') {
+            console.log("Subscribing to contacts changes...");
+            subscribeContacts(async () => {
+                console.log("Contacts changed, refreshing chats...");
+                await loadChats();
+            });
+        }
+
+        // Listen for visibility change
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Listen for storage changes (in case contacts are updated in another tab)
+        // Listen for storage changes
         window.addEventListener('storage', handleStorageChange);
+
+        // Check for contact updates from other tabs
+        checkForContactUpdates();
+
+        // Periodic refresh every 30 seconds (to catch any missed updates)
+        setInterval(() => {
+            if (!document.hidden) {
+                loadChats();
+            }
+        }, 30000);
+
+        console.log("Chats page initialized successfully");
 
     } catch (error) {
         console.error("Chats initialization error:", error);
         showToast("Failed to initialize chats");
+    }
+}
+
+// ============================================
+// CHECK FOR CONTACT UPDATES
+// ============================================
+function checkForContactUpdates() {
+    try {
+        const lastUpdate = localStorage.getItem('contacts_last_updated');
+        const currentTime = Date.now();
+        
+        if (lastUpdate) {
+            const timeDiff = currentTime - parseInt(lastUpdate);
+            if (timeDiff < 5000) {
+                // Contacts were updated recently, refresh
+                console.log("Recent contact update detected, refreshing...");
+                setTimeout(() => loadChats(), 500);
+            }
+        }
+    } catch (error) {
+        console.error("Error checking for contact updates:", error);
     }
 }
 
@@ -80,13 +120,18 @@ function bindChatsEvents() {
 // ============================================
 function handleVisibilityChange() {
     if (!document.hidden) {
-        // Refresh when user comes back to the tab
+        console.log("Tab became visible, refreshing chats...");
         loadChats();
     }
 }
 
 function handleStorageChange(event) {
-    if (event.key === 'contacts_updated' || event.key === 'new_contact_added') {
+    console.log("Storage changed:", event.key);
+    
+    if (event.key === 'contacts_last_updated' || 
+        event.key === 'new_contact_added' ||
+        event.key === 'contact_removed') {
+        console.log("Contact change detected in another tab, refreshing...");
         loadChats();
     }
 }
@@ -95,8 +140,11 @@ function handleStorageChange(event) {
 // LOAD CHATS
 // ============================================
 async function loadChats() {
-    // Show loading state
-    if (elements.chatList) {
+    // Store current search query if any
+    const currentSearch = elements.chatSearch?.value?.trim()?.toLowerCase() || '';
+
+    // Show loading state (only if not searching)
+    if (elements.chatList && !currentSearch) {
         elements.chatList.innerHTML = `
             <div class="card">
                 <div class="subtext" style="text-align:center;padding:20px;">
@@ -107,16 +155,20 @@ async function loadChats() {
     }
 
     try {
+        console.log("Loading contacts...");
         const contacts = await getContacts();
+        console.log("Contacts loaded:", contacts?.length || 0);
         
         if (!contacts || contacts.length === 0) {
+            console.log("No contacts found");
+            chatItems = [];
             renderChats([]);
             return;
         }
 
         const conversations = [];
 
-        // Process each contact to get their last message and unread count
+        // Process each contact
         for (const contact of contacts) {
             try {
                 // Get last message
@@ -158,12 +210,11 @@ async function loadChats() {
 
             } catch (error) {
                 console.error("Error processing contact:", error);
-                // Continue with next contact
                 continue;
             }
         }
 
-        // Sort conversations by last message time
+        // Sort by last message time
         conversations.sort((a, b) => {
             const aTime = a.lastMessage?.created_at || "";
             const bTime = b.lastMessage?.created_at || "";
@@ -171,13 +222,21 @@ async function loadChats() {
         });
 
         chatItems = conversations;
-        renderChats(conversations);
+        console.log("Chat items updated:", chatItems.length);
 
-        // Store the current chat list in session storage for cross-tab updates
+        // Render based on search filter
+        if (currentSearch) {
+            const filtered = filterChatsBySearch(currentSearch);
+            renderChats(filtered);
+        } else {
+            renderChats(conversations);
+        }
+
+        // Store update time
         try {
-            sessionStorage.setItem('chat_items_updated', Date.now().toString());
+            localStorage.setItem('chats_last_updated', Date.now().toString());
         } catch (e) {
-            // Ignore storage errors
+            // Ignore
         }
 
     } catch (error) {
@@ -201,30 +260,58 @@ async function loadChats() {
 }
 
 // ============================================
+// FILTER CHATS BY SEARCH
+// ============================================
+function filterChatsBySearch(query) {
+    if (!query) return chatItems;
+    
+    return chatItems.filter(chat => {
+        const name = (chat.nickname || chat.contact_username || "").toLowerCase();
+        return name.includes(query);
+    });
+}
+
+// ============================================
 // RENDER CHATS
 // ============================================
 function renderChats(items) {
     if (!elements.chatList) {
+        console.error("Chat list element not found");
         return;
     }
 
     elements.chatList.innerHTML = "";
 
     if (!items || items.length === 0) {
-        elements.chatList.innerHTML = `
-            <div class="card">
-                <div style="text-align:center;padding:40px 20px;">
-                    <div style="font-size:48px;margin-bottom:16px;">💬</div>
-                    <div style="font-weight:500;margin-bottom:8px;">No chats yet</div>
-                    <div class="subtext">
-                        Go to Contacts to add friends and start chatting
+        // Check if it's because there are no contacts or just no messages
+        if (chatItems.length === 0) {
+            elements.chatList.innerHTML = `
+                <div class="card">
+                    <div style="text-align:center;padding:40px 20px;">
+                        <div style="font-size:48px;margin-bottom:16px;">👥</div>
+                        <div style="font-weight:500;margin-bottom:8px;">No contacts yet</div>
+                        <div class="subtext">
+                            Add friends from the Contacts page to start chatting
+                        </div>
+                        <button class="btn" style="margin-top:16px;" onclick="window.location.href='contacts.html'">
+                            Go to Contacts
+                        </button>
                     </div>
-                    <button class="btn" style="margin-top:16px;" onclick="window.location.href='contacts.html'">
-                        Go to Contacts
-                    </button>
                 </div>
-            </div>
-        `;
+            `;
+        } else {
+            elements.chatList.innerHTML = `
+                <div class="card">
+                    <div style="text-align:center;padding:40px 20px;">
+                        <div style="font-size:48px;margin-bottom:16px;">💬</div>
+                        <div style="font-weight:500;margin-bottom:8px;">No chats yet</div>
+                        <div class="subtext">
+                            Start a conversation with your contacts
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
         return;
     }
 
@@ -252,18 +339,21 @@ function createChatCard(chat) {
         : "";
     
     const displayName = chat.nickname || chat.contact_username || "Unknown";
-    const avatarUrl = chat.avatar_url || "icon-192.png";
 
     // Highlight if there are unread messages
     if (chat.unreadCount > 0) {
         card.style.borderLeft = "3px solid #4CAF50";
     }
 
+    // Always use the contact's ID to ensure uniqueness
+    const contactId = chat.contact_tego_id || chat.id || 'unknown';
+    card.dataset.contactId = contactId;
+
     card.innerHTML = `
         <div class="list-item">
             <img 
                 class="avatar" 
-                src="${avatarUrl}"
+                src="icon-192.png"
                 alt="${displayName}'s avatar"
                 loading="lazy"
                 onerror="this.src='icon-192.png'"
@@ -342,18 +432,15 @@ function searchChats() {
         return;
     }
 
-    const filtered = chatItems.filter(chat => {
-        const name = (chat.nickname || chat.contact_username || "").toLowerCase();
-        return name.includes(query);
-    });
-
+    const filtered = filterChatsBySearch(query);
     renderChats(filtered);
 }
 
 // ============================================
-// FORCE REFRESH (for external calls)
+// FORCE REFRESH
 // ============================================
 function refreshChats() {
+    console.log("Manual refresh triggered");
     loadChats();
 }
 
