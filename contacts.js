@@ -250,8 +250,7 @@ async function addUserToContacts(
 
         await addContact({
 
-            owner_id:
-            APP.user.id,
+            owner_id: myProfile.id
 
             contact_auth_id:
             user.auth_id,
