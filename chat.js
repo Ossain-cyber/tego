@@ -229,11 +229,11 @@ function renderMessages(messages) {
         }
         
         item.innerHTML = `
-            ${message.reply_text ? `
-                <div class="reply-bubble">
-                    ${escapeHtml(message.reply_text)}
-                </div>
-            ` : ""}
+            ${message.reply_to_id && message.reply_text ? `
+    <div class="reply-bubble">
+        ${escapeHtml(message.reply_text)}
+    </div>
+` : ""}
             <div class="message-body">
                 ${body}
             </div>
@@ -529,14 +529,23 @@ async function toggleRecording() {
 }
 
 function scrollMessagesToBottom() {
-    const container = document.getElementById("messages");
+
+    const container =
+    document.getElementById(
+        "messages"
+    );
+
     if (!container) {
         return;
     }
-    
-    setTimeout(() => {
-        container.scrollTop = container.scrollHeight;
-    }, 50);
+
+    requestAnimationFrame(() => {
+
+        container.scrollTop =
+        container.scrollHeight;
+
+    });
+
 }
 
 function escapeHtml(text) {
@@ -587,5 +596,50 @@ async function deleteMessage(messageId) {
         showToast("Delete failed");
     }
 }
+document.addEventListener(
+"DOMContentLoaded",
+() => {
+
+const messagesBox =
+document.getElementById(
+"messages"
+);
+
+const scrollBtn =
+document.getElementById(
+"scroll-bottom-btn"
+);
+
+if(
+!messagesBox ||
+!scrollBtn
+){
+return;
+}
+
+messagesBox.addEventListener(
+"scroll",
+() => {
+
+const distance =
+messagesBox.scrollHeight -
+messagesBox.scrollTop -
+messagesBox.clientHeight;
+
+scrollBtn.style.display =
+distance > 200
+? "flex"
+: "none";
+
+}
+);
+
+scrollBtn.addEventListener(
+"click",
+scrollMessagesToBottom
+);
+
+}
+);
 
 window.initChatPage = initChatPage;
