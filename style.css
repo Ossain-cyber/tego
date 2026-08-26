@@ -482,11 +482,22 @@ button {
   animation: statusFade 2s ease-in-out infinite;
 }
 
+/* Chat Page Layout */
+.chat-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* Messages */
 .messages {
-  padding: 14px;
-  padding-bottom: 100px;
-  min-height: calc(100vh - 150px);
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 140px;
+  min-height: 0;
+  height: calc(100vh - 140px);
   scroll-behavior: smooth;
 }
 
@@ -526,8 +537,9 @@ button {
 }
 
 .message-status {
-  font-size: 11px;
-  opacity: 0.8;
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .delete-message-btn {
@@ -593,12 +605,12 @@ button {
 }
 
 .reply-btn {
+  margin-top: 6px;
   background: none;
   border: none;
+  color: #60a5fa;
   font-size: 12px;
-  opacity: 0.7;
-  margin-top: 4px;
-  color: #fff;
+  font-weight: 600;
 }
 
 /* Chat Composer */
@@ -607,12 +619,13 @@ button {
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px;
+  padding: 12px;
   background: var(--surface);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 #message-input {
@@ -633,10 +646,10 @@ button {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--surface-2);
-  color: white;
-  font-size: 22px;
-  transition: transform 0.2s ease;
+  background: var(--primary);
+  color: #fff;
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .send-btn {
@@ -680,16 +693,16 @@ button {
 /* Navigation */
 .bottom-nav {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   height: 70px;
   background: var(--surface);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  z-index: 100;
+  justify-content: space-around;
+  z-index: 90;
 }
 
 .nav-btn {
@@ -701,7 +714,7 @@ button {
 }
 
 .nav-btn.active {
-  color: var(--primary-light);
+  color: var(--primary);
   font-weight: 700;
   animation: navActive 0.3s ease both;
 }
@@ -710,13 +723,13 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  justify-content: center;
   color: var(--text-soft);
+  font-size: 12px;
 }
 
 .nav-item.active {
-  color: var(--primary-light);
+  color: var(--primary);
   animation: navActive 0.3s ease both;
 }
 
@@ -760,6 +773,11 @@ input[type="file"] {
   width: 100%;
   margin-top: 10px;
   color: var(--text-soft);
+  background: var(--surface-2);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Logo */
@@ -782,6 +800,18 @@ input[type="file"] {
   height: 100%;
   object-fit: cover;
   border-radius: 28px;
+}
+
+/* Contact / Profile Button Fix */
+.list-item button,
+.contact-btn,
+.profile-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 600;
 }
 
 /* Utility */
@@ -820,20 +850,25 @@ input[type="file"] {
 /* Scroll to bottom button */
 #scroll-bottom-btn {
   position: fixed;
-  right: 20px;
-  bottom: 110px;
-  width: 48px;
-  height: 48px;
+  right: 16px;
+  bottom: 90px;
+  width: 50px;
+  height: 50px;
   border: none;
   border-radius: 50%;
-  background: #2563eb;
+  background: var(--primary);
   color: #fff;
   font-size: 22px;
+  font-weight: 700;
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 999;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+#scroll-bottom-btn.show {
+  display: flex;
 }
 
 /* Settings actions */
@@ -1183,40 +1218,12 @@ button:active,
     scroll-behavior: auto !important;
   }
 }
-.messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px;
-    scroll-behavior: smooth;
-    min-height: 0; /* Important for flexbox scrolling */
-    max-height: 100%;
-}
 
-/* Scroll button styling */
-#scroll-bottom-btn {
-    position: absolute;
-    bottom: 80px;
-    right: 20px;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: #0084ff;
-    color: white;
-    border: none;
-    cursor: pointer;
-    display: none; /* Hidden by default */
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    z-index: 100;
-    transition: all 0.3s ease;
+/* File Input Styling */
+input[type="file"] {
+  background: var(--surface-2);
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
-
-#scroll-bottom-btn:hover {
-    background-color: #0066cc;
-    transform: scale(1.1);
-}
-
-#scroll-bottom-btn.show {
-    display: flex;
-    }
