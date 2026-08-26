@@ -625,6 +625,7 @@ throw error;
 }
 
     }
+window.deleteMessage = softDeleteMessage;
 window.deleteMessage =
 deleteMessage;
 window.isUsernameAvailable = isUsernameAvailable;
