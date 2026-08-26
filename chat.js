@@ -166,7 +166,8 @@ function renderMessages(messages) {
     }
     
     messages.forEach(message => {
-        const mine = message.sender_id === APP.user.id;
+        // Fix #1: Use tego_id to determine if message is mine
+        const mine = message.sender_tego_id === currentProfile.tego_id;
         const item = document.createElement("div");
         item.className = mine ? "message me" : "message other";
         
@@ -176,9 +177,12 @@ function renderMessages(messages) {
             body = `
                 <i>Message deleted</i>
             `;
-        } else if(message.message_type === "audio") {
+        } 
+        // Fix #3: Check mime_type for audio messages
+        else if (message.mime_type && message.mime_type.startsWith("audio/")) {
             body = `
-                <audio controls src="${message.media_url}">
+                <audio controls>
+                    <source src="${message.media_url}" type="${message.mime_type}">
                 </audio>
             `;
         } else if (message.message_type === "image") {
@@ -279,13 +283,20 @@ async function sendTextMessage() {
             message: text,
             message_type: "text",
             reply_to_id: replyingTo?.id || null,
-            reply_text: replyingTo?.message || null,
+            // Fix #5: Better reply text fallback
+            reply_text: (
+                replyingTo?.message ||
+                replyingTo?.file_name ||
+                "Media"
+            ),
             status: "delivered"
         });
         
         replyingTo = null;
         document.getElementById("reply-preview").classList.add("hidden");
-        await loadConversation();
+        
+        // Fix #7: Immediate local refresh
+        setTimeout(loadConversation, 300);
     } catch {
         showToast("Message failed");
     }
@@ -323,7 +334,8 @@ async function uploadAndSendMedia(event) {
             mime_type: file.type
         });
         
-        await loadConversation();
+        // Fix #7: Immediate local refresh
+        setTimeout(loadConversation, 300);
         event.target.value = "";
     } catch {
         showToast("Upload failed");
@@ -337,9 +349,16 @@ function subscribeRealtimeMessages() {
             return;
         }
 
+        // Fix #2: Use tego_id for realtime chat detection
         const isCurrentChat = 
-            (row.sender_id === APP.user.id && row.receiver_id === activeChat.contact_auth_id) ||
-            (row.sender_id === activeChat.contact_auth_id && row.receiver_id === APP.user.id);
+            (
+                row.sender_tego_id === currentProfile.tego_id &&
+                row.receiver_tego_id === activeChat.contact_tego_id
+            ) ||
+            (
+                row.sender_tego_id === activeChat.contact_tego_id &&
+                row.receiver_tego_id === currentProfile.tego_id
+            );
 
         if (isCurrentChat) {
             await loadConversation();
@@ -351,9 +370,16 @@ async function toggleRecording() {
     const button = document.getElementById("record-btn");
     
     if (!isRecording) {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true
-        });
+        // Fix #6: Handle microphone permission errors
+        let stream;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+        } catch (error) {
+            showToast("Microphone permission denied");
+            return;
+        }
         
         audioChunks = [];
         mediaRecorder = new MediaRecorder(stream);
@@ -380,7 +406,9 @@ async function toggleRecording() {
                 file_name: file.name,
                 mime_type: "audio/webm"
             });
-            await loadConversation();
+            
+            // Fix #7: Immediate local refresh
+            setTimeout(loadConversation, 300);
         };
         
         mediaRecorder.start();
@@ -429,11 +457,13 @@ async function markMessagesRead(senderTegoId) {
 
 async function deleteMessage(messageId) {
     try {
+        // Fix #4: Add edited_at to force realtime update
         await APP.supabase
             .from("messages")
             .update({
                 message: "Message deleted",
-                deleted_at: new Date().toISOString()
+                deleted_at: new Date().toISOString(),
+                edited_at: new Date().toISOString()
             })
             .eq("id", messageId);
         
