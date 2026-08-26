@@ -280,13 +280,27 @@ async function addUserToContacts(
 
     } catch (error) {
 
-        showToast(
-            error.message ||
-            "Unable to add contact"
-        );
+if(
+error.message &&
+error.message.includes(
+"contacts_unique_contact"
+)
+){
 
-    }
+showToast(
+"Already in contacts"
+);
 
+return;
+
+}
+
+showToast(
+error.message ||
+"Unable to add contact"
+);
+
+}
 }
 
 async function loadContactsList() {
