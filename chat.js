@@ -5,6 +5,7 @@ let messagesChannel = null;
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
+let allMessagesCache = []; // Cache messages to prevent disappearing
 
 async function compressImage(file) {
     return new Promise((resolve, reject) => {
@@ -65,9 +66,6 @@ async function initChatPage() {
         window.location.href = "profile.html";
         return;
     }
-
-    // Debug alert to verify data
-    alert(`Chat initialized:\nMy Tego ID: ${currentProfile.tego_id}\nContact Tego ID: ${activeChat.contact_tego_id}`);
 
     setupChatHeader();
     bindChatEvents();
@@ -132,63 +130,49 @@ function bindChatEvents() {
 
 async function loadConversation() {
     try {
-        // Try multiple query approaches
-        let messages = [];
-        let error = null;
-        
-        // First approach: Simple OR query
-        const result = await APP.supabase
+        // Get ALL messages for this user (both sent and received)
+        const { data: allUserMessages, error } = await APP.supabase
             .from("messages")
             .select("*")
             .or(`sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${currentProfile.tego_id}`)
             .order("created_at", { ascending: true });
+
+        if (error) {
+            // Fallback: try getting messages without filter
+            const fallbackResult = await APP.supabase
+                .from("messages")
+                .select("*")
+                .order("created_at", { ascending: true });
+                
+            if (fallbackResult.error) {
+                throw fallbackResult.error;
+            }
             
-        if (!result.error && result.data) {
-            // Filter messages for this specific conversation
-            messages = result.data.filter(msg => 
+            // Filter manually
+            const filteredMessages = (fallbackResult.data || []).filter(msg => 
                 (msg.sender_tego_id === currentProfile.tego_id && msg.receiver_tego_id === activeChat.contact_tego_id) ||
                 (msg.sender_tego_id === activeChat.contact_tego_id && msg.receiver_tego_id === currentProfile.tego_id)
             );
-        } else {
-            error = result.error;
             
-            // Fallback: Try two separate queries
-            if (error) {
-                const [sentResult, receivedResult] = await Promise.all([
-                    APP.supabase
-                        .from("messages")
-                        .select("*")
-                        .eq("sender_tego_id", currentProfile.tego_id)
-                        .eq("receiver_tego_id", activeChat.contact_tego_id),
-                    APP.supabase
-                        .from("messages")
-                        .select("*")
-                        .eq("sender_tego_id", activeChat.contact_tego_id)
-                        .eq("receiver_tego_id", currentProfile.tego_id)
-                ]);
-                
-                if (!sentResult.error && !receivedResult.error) {
-                    messages = [...(sentResult.data || []), ...(receivedResult.data || [])]
-                        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                    error = null;
-                } else {
-                    error = sentResult.error || receivedResult.error;
-                }
-            }
+            allMessagesCache = filteredMessages;
+            renderMessages(filteredMessages);
+        } else {
+            // Filter for this specific conversation
+            const conversationMessages = (allUserMessages || []).filter(msg => 
+                (msg.sender_tego_id === currentProfile.tego_id && msg.receiver_tego_id === activeChat.contact_tego_id) ||
+                (msg.sender_tego_id === activeChat.contact_tego_id && msg.receiver_tego_id === currentProfile.tego_id)
+            );
+            
+            allMessagesCache = conversationMessages;
+            renderMessages(conversationMessages);
         }
         
-        if (error) {
-            throw error;
-        }
-        
-        // Alert to see how many messages loaded
-        alert(`Loaded ${messages.length} messages`);
-        
-        renderMessages(messages);
         await markMessagesRead(activeChat.contact_tego_id);
     } catch (error) {
-        alert(`Error loading messages: ${error.message || error}`);
-        showToast("Unable to load messages");
+        console.error("Load error:", error);
+        // If all else fails, keep showing cached messages
+        renderMessages(allMessagesCache);
+        showToast("Unable to refresh messages");
     }
 }
 
@@ -198,9 +182,14 @@ function renderMessages(messages) {
         return;
     }
     
+    // Don't clear if we have no messages but have cached messages
+    if ((!messages || messages.length === 0) && allMessagesCache.length > 0) {
+        messages = allMessagesCache;
+    }
+    
     container.innerHTML = "";
     
-    if (messages.length === 0) {
+    if (!messages || messages.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 No messages yet
@@ -325,10 +314,7 @@ async function sendTextMessage() {
             status: "delivered"
         };
         
-        // Show what we're sending
-        alert(`Sending message:\nFrom: ${messageData.sender_tego_id}\nTo: ${messageData.receiver_tego_id}\nText: ${text}`);
-        
-        // Send the message directly using supabase
+        // Send the message
         const { data, error } = await APP.supabase
             .from("messages")
             .insert([messageData])
@@ -336,58 +322,24 @@ async function sendTextMessage() {
             .single();
             
         if (error) {
-            alert(`Error sending: ${error.message}`);
             throw error;
         }
         
-        alert(`Message sent successfully! ID: ${data.id}`);
+        // Add to cache immediately
+        allMessagesCache.push(data);
         
         replyingTo = null;
         document.getElementById("reply-preview").classList.add("hidden");
         
-        // Add the message to UI immediately
-        addMessageToUI(data);
+        // Render from cache to prevent disappearing
+        renderMessages(allMessagesCache);
         
-        // Reload conversation
-        await loadConversation();
+        // Don't reload immediately - let realtime handle it
+        // await loadConversation();
     } catch (error) {
-        alert(`Send failed: ${error.message || error}`);
+        console.error("Send error:", error);
         showToast("Message failed");
     }
-}
-
-function addMessageToUI(message) {
-    const container = document.getElementById("messages");
-    if (!container) return;
-    
-    const emptyState = container.querySelector('.empty-state');
-    if (emptyState) emptyState.remove();
-    
-    const item = document.createElement("div");
-    item.className = "message me";
-    
-    let body = escapeHtml(message.message || "");
-    
-    item.innerHTML = `
-        <div class="message-body">
-            ${body}
-        </div>
-        <button class="reply-btn" data-id="${message.id}">Reply</button>
-        <div class="message-footer">
-            <div class="message-time">
-                ${formatTime(message.created_at)}
-            </div>
-            <div class="message-status">
-                ${getStatusIcon(message.status)}
-            </div>
-        </div>
-        <button class="delete-message-btn" data-id="${message.id}">
-            Delete
-        </button>
-    `;
-    
-    container.appendChild(item);
-    scrollMessagesToBottom();
 }
 
 async function uploadAndSendMedia(event) {
@@ -426,8 +378,6 @@ async function uploadAndSendMedia(event) {
             status: "delivered"
         };
         
-        alert(`Sending media:\nType: ${type}\nName: ${file.name}`);
-        
         const { data, error } = await APP.supabase
             .from("messages")
             .insert([messageData])
@@ -435,16 +385,16 @@ async function uploadAndSendMedia(event) {
             .single();
             
         if (error) {
-            alert(`Error sending media: ${error.message}`);
             throw error;
         }
         
-        alert("Media sent successfully!");
+        // Add to cache
+        allMessagesCache.push(data);
+        renderMessages(allMessagesCache);
         
-        await loadConversation();
         event.target.value = "";
     } catch (error) {
-        alert(`Upload failed: ${error.message || error}`);
+        console.error("Upload error:", error);
         showToast("Upload failed");
     }
 }
@@ -455,7 +405,7 @@ function subscribeRealtimeMessages() {
         APP.supabase.removeChannel(messagesChannel);
     }
     
-    // Simple realtime subscription
+    // Subscribe to all message changes
     messagesChannel = APP.supabase
         .channel('messages-channel')
         .on(
@@ -465,13 +415,38 @@ function subscribeRealtimeMessages() {
                 schema: 'public',
                 table: 'messages'
             },
-            async (payload) => {
-                // Check if this message is relevant to our conversation
+            (payload) => {
                 const newMsg = payload.new;
+                const oldMsg = payload.old;
+                
+                // Check if this message is relevant to our conversation
                 if (newMsg && 
                     ((newMsg.sender_tego_id === currentProfile.tego_id && newMsg.receiver_tego_id === activeChat.contact_tego_id) ||
                      (newMsg.sender_tego_id === activeChat.contact_tego_id && newMsg.receiver_tego_id === currentProfile.tego_id))) {
-                    await loadConversation();
+                    
+                    // Update cache
+                    if (payload.eventType === 'INSERT') {
+                        // Check if message already exists in cache
+                        const existingIndex = allMessagesCache.findIndex(m => m.id === newMsg.id);
+                        if (existingIndex === -1) {
+                            allMessagesCache.push(newMsg);
+                        } else {
+                            allMessagesCache[existingIndex] = newMsg;
+                        }
+                    } else if (payload.eventType === 'UPDATE') {
+                        const existingIndex = allMessagesCache.findIndex(m => m.id === newMsg.id);
+                        if (existingIndex !== -1) {
+                            allMessagesCache[existingIndex] = newMsg;
+                        }
+                    } else if (payload.eventType === 'DELETE' && oldMsg) {
+                        allMessagesCache = allMessagesCache.filter(m => m.id !== oldMsg.id);
+                    }
+                    
+                    // Sort by created_at
+                    allMessagesCache.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    
+                    // Render from cache
+                    renderMessages(allMessagesCache);
                 }
             }
         )
@@ -488,7 +463,6 @@ async function toggleRecording() {
                 audio: true
             });
         } catch (error) {
-            alert("Microphone permission denied");
             showToast("Microphone permission denied");
             return;
         }
@@ -531,13 +505,13 @@ async function toggleRecording() {
                     .single();
                     
                 if (error) {
-                    alert(`Error sending audio: ${error.message}`);
                     throw error;
                 }
                 
-                await loadConversation();
+                allMessagesCache.push(data);
+                renderMessages(allMessagesCache);
             } catch (error) {
-                alert(`Audio upload failed: ${error.message || error}`);
+                console.error("Audio error:", error);
                 showToast("Failed to send audio");
             }
         };
@@ -586,7 +560,7 @@ async function markMessagesRead(senderTegoId) {
             .eq("receiver_tego_id", currentProfile.tego_id)
             .neq("status", "read");
     } catch (error) {
-        console.error("Error marking messages read:", error);
+        console.error("Mark read error:", error);
     }
 }
 
@@ -601,7 +575,14 @@ async function deleteMessage(messageId) {
             })
             .eq("id", messageId);
         
-        await loadConversation();
+        // Update local cache
+        const messageIndex = allMessagesCache.findIndex(m => m.id === messageId);
+        if (messageIndex !== -1) {
+            allMessagesCache[messageIndex].deleted_at = new Date().toISOString();
+            allMessagesCache[messageIndex].message = "Message deleted";
+        }
+        
+        renderMessages(allMessagesCache);
     } catch (error) {
         showToast("Delete failed");
     }
