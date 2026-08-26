@@ -19,6 +19,7 @@ async function initChatsPage() {
         "profile.html";
 
         return;
+
     }
 
     bindChatsEvents();
@@ -47,25 +48,6 @@ function bindChatsEvents() {
         search.addEventListener(
             "input",
             searchChats
-        );
-
-    }
-
-    const newChat =
-    document.getElementById(
-        "new-chat-btn"
-    );
-
-    if (newChat) {
-
-        newChat.addEventListener(
-            "click",
-            () => {
-
-                window.location.href =
-                "contacts.html";
-
-            }
         );
 
     }
@@ -102,51 +84,48 @@ async function loadChats() {
             .limit(1);
 
             if (error) {
-
                 console.error(error);
-
                 continue;
-
             }
 
             const lastMessage =
-data?.[0] || null;
+            data?.[0] || null;
 
-const {
-count
-} =
-await APP.supabase
-.from("messages")
-.select(
-"*",
-{
-count:"exact",
-head:true
-}
-)
-.eq(
-"sender_tego_id",
-contact.contact_tego_id
-)
-.eq(
-"receiver_tego_id",
-currentProfile.tego_id
-)
-.neq(
-"status",
-"read"
-);
+            const {
+                count
+            } =
+            await APP.supabase
+            .from("messages")
+            .select(
+                "*",
+                {
+                    count: "exact",
+                    head: true
+                }
+            )
+            .eq(
+                "sender_tego_id",
+                contact.contact_tego_id
+            )
+            .eq(
+                "receiver_tego_id",
+                currentProfile.tego_id
+            )
+            .neq(
+                "status",
+                "read"
+            );
 
-conversations.push({
+            conversations.push({
 
-    ...contact,
+                ...contact,
 
-    lastMessage,
+                lastMessage,
 
-    unreadCount:
-    count || 0
+                unreadCount:
+                count || 0
 
-});
+            });
 
         }
 
@@ -188,18 +167,11 @@ conversations.push({
 
 }
 
-function renderChats(
-    items
-) {
+function renderChats(items) {
 
     const container =
     document.getElementById(
         "chat-list"
-    );
-
-    const empty =
-    document.getElementById(
-        "empty-state"
     );
 
     if (!container) {
@@ -213,18 +185,14 @@ function renderChats(
         items.length === 0
     ) {
 
-        if (empty) {
-            empty.style.display =
-            "block";
-        }
+        container.innerHTML = `
+        <div class="empty-state">
+            No chats yet
+        </div>
+        `;
 
         return;
 
-    }
-
-    if (empty) {
-        empty.style.display =
-        "none";
     }
 
     items.forEach(chat => {
@@ -251,140 +219,69 @@ function renderChats(
 
         card.innerHTML = `
 
-<div class="chat-row">
+        <div class="list-item">
 
-    <img
-    class="avatar"
-    src="icon-192.png"
-    >
-
-    <div class="chat-content">
-
-        <div class="chat-top">
-
-            <div class="chat-name">
-                ${
-                    chat.nickname ||
-                    chat.contact_username
-                }
-            </div>
-
-            <div class="chat-time">
-                ${lastTime}
-            </div>
-
-        </div>
-
-        <div class="chat-bottom">
-
-            <div class="chat-preview">
-                ${lastText}
-            </div>
-
-            ${
-                chat.unreadCount > 0
-                ? `
-                <div class="badge">
-                    ${chat.unreadCount}
-                </div>
-                `;
-                : ""
-            }
-
-        </div>
-
-    </div>
-
-</div>
-
-    <div class="chat-main">
-
-        <div class="chat-top">
-
-            <div class="chat-name">
-                ${
-                    chat.nickname ||
-                    chat.contact_username ||
-                    "Unknown"
-                }
-            </div>
-<div class="info">
-
-    <div
-    style="
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    "
-    >
-
-        <div class="name">
-            ${
-                chat.nickname ||
-                chat.contact_username ||
-                "Unknown"
-            }
-        </div>
-
-        ${
-            chat.unread_count > 0
-            ? `
-            <span
-            style="
-            background:#2563eb;
-            color:white;
-            min-width:22px;
-            height:22px;
-            border-radius:50%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-size:12px;
-            font-weight:700;
-            "
+            <img
+            class="avatar"
+            src="icon-192.png"
+            alt=""
             >
-            ${chat.unread_count}
-            </span>
-            `
-            : ""
-        }
 
-    </div>
+            <div class="info">
 
-    <div class="subtext">
-        ${lastText}
-    </div>
+                <div
+                style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:10px;
+                "
+                >
 
-</div>
-            <div>
+                    <div class="name">
+                        ${
+                            chat.nickname ||
+                            chat.contact_username ||
+                            "Unknown"
+                        }
+                    </div>
 
-<div class="subtext">
-${lastTime}
-</div>
+                    <div class="subtext">
+                        ${lastTime}
+                    </div>
 
-${
-chat.unreadCount > 0
-? `
-<div class="badge">
-${chat.unreadCount}
-</div>
-`
-: ""
-}
+                </div>
 
-</div>
+                <div
+                style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:10px;
+                "
+                >
+
+                    <div class="subtext">
+                        ${lastText}
+                    </div>
+
+                    ${
+                        chat.unreadCount > 0
+                        ? `
+                        <div class="badge">
+                            ${chat.unreadCount}
+                        </div>
+                        `
+                        : ""
+                    }
+
+                </div>
+
+            </div>
+
         </div>
 
-        <div class="chat-message">
-            ${lastText}
-        </div>
-
-    </div>
-
-</div>
-
-`;
+        `;
 
         card.addEventListener(
             "click",
