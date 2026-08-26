@@ -6,6 +6,7 @@ let myContacts = [];
 let searchTimeout = null;
 let myProfile = null;
 let abortController = null;
+let isInitialized = false;
 
 // ============================================
 // DOM CACHE
@@ -38,23 +39,34 @@ async function initContactsPage() {
         }
 
         bindContactsEvents();
-        await loadContactsList();
+        
+        // Force load contacts with fresh data
+        await loadContactsList(true);
+        isInitialized = true;
 
         // Subscribe to contacts changes
         if (typeof subscribeContacts === 'function') {
+            console.log("Setting up contacts subscription...");
             subscribeContacts(async () => {
-                console.log("Contacts changed via subscription, reloading...");
-                await loadContactsList();
-                // Also notify chats page
+                console.log("Contacts subscription triggered!");
+                // Force refresh when subscription fires
+                await loadContactsList(true);
                 notifyChatsPage();
             });
         }
 
-        // Listen for visibility change to refresh when user returns to tab
+        // Listen for visibility change
         document.addEventListener('visibilitychange', handleVisibilityChange);
 
-        // Listen for storage changes (for cross-tab updates)
+        // Listen for storage changes
         window.addEventListener('storage', handleStorageChange);
+
+        // Set up a refresh interval (every 10 seconds)
+        setInterval(() => {
+            if (!document.hidden) {
+                loadContactsList(true);
+            }
+        }, 10000);
 
         console.log("Contacts page initialized");
 
@@ -68,18 +80,19 @@ async function initContactsPage() {
 // VISIBILITY & STORAGE HANDLERS
 // ============================================
 function handleVisibilityChange() {
-    if (!document.hidden) {
+    if (!document.hidden && isInitialized) {
         console.log("Tab became visible, refreshing contacts...");
-        loadContactsList();
+        loadContactsList(true);
     }
 }
 
 function handleStorageChange(event) {
     if (event.key === 'contact_added' || 
         event.key === 'contact_removed' ||
-        event.key === 'contacts_last_updated') {
+        event.key === 'contacts_last_updated' ||
+        event.key === 'force_contacts_refresh') {
         console.log("Contact change detected in another tab, refreshing...");
-        loadContactsList();
+        loadContactsList(true);
     }
 }
 
@@ -88,14 +101,10 @@ function handleStorageChange(event) {
 // ============================================
 function notifyChatsPage() {
     try {
-        // Store in localStorage for cross-tab communication
-        localStorage.setItem('contacts_last_updated', Date.now().toString());
-        localStorage.setItem('new_contact_added', 'true');
-        
-        // Store in sessionStorage for same tab
-        sessionStorage.setItem('contact_added', Date.now().toString());
-        
-        // If the chats page is open, it will detect this change
+        const timestamp = Date.now().toString();
+        localStorage.setItem('contacts_last_updated', timestamp);
+        localStorage.setItem('force_contacts_refresh', timestamp);
+        sessionStorage.setItem('contact_added', timestamp);
         console.log("Notified chats page of contact changes");
     } catch (error) {
         console.error("Error notifying chats page:", error);
@@ -106,7 +115,6 @@ function notifyChatsPage() {
 // EVENT BINDING
 // ============================================
 function bindContactsEvents() {
-    // Cleanup previous controller
     if (abortController) {
         abortController.abort();
     }
@@ -193,7 +201,6 @@ function renderSearchResults(users) {
     let hasResults = false;
 
     users.forEach(user => {
-        // Skip current user
         if (user.tego_id === myProfile?.tego_id) {
             return;
         }
@@ -274,20 +281,17 @@ function renderSearchResults(users) {
 // ADD CONTACT
 // ============================================
 async function addUserToContacts(user) {
-    // Validate
     if (!user?.auth_id || !user?.tego_id) {
         showToast("Invalid user data");
         return;
     }
 
-    // Check if already in contacts
     if (myContacts.some(contact => contact.contact_tego_id === user.tego_id)) {
         showToast("Already in contacts");
         return;
     }
 
     try {
-        // Ensure user is authenticated
         if (!APP?.user?.id) {
             showToast("Authentication error");
             return;
@@ -295,7 +299,7 @@ async function addUserToContacts(user) {
 
         console.log("Adding contact:", user.tego_id);
 
-        await addContact({
+        const result = await addContact({
             owner_id: APP.user.id,
             contact_auth_id: user.auth_id,
             contact_tego_id: user.tego_id,
@@ -303,15 +307,16 @@ async function addUserToContacts(user) {
             nickname: user.display_name || user.username
         });
 
+        console.log("Add contact result:", result);
         showToast("Contact added successfully");
         
-        // Notify chats page about the new contact
+        // Force immediate refresh
+        await loadContactsList(true);
+        
+        // Notify chats page
         notifyChatsPage();
         
-        // Reload contacts list
-        await loadContactsList();
-        
-        // Refresh search results to update the button state
+        // Refresh search results
         renderSearchResults(contactResults);
 
         console.log("Contact added successfully:", user.tego_id);
@@ -321,6 +326,8 @@ async function addUserToContacts(user) {
         
         if (error.message && error.message.includes("contacts_unique_contact")) {
             showToast("Already in contacts");
+            // Refresh to update the UI
+            await loadContactsList(true);
             return;
         }
 
@@ -340,31 +347,64 @@ async function addUserToContacts(user) {
 }
 
 // ============================================
-// LOAD CONTACTS
+// LOAD CONTACTS - FORCED REFRESH VERSION
 // ============================================
-async function loadContactsList() {
+async function loadContactsList(forceRefresh = false) {
     // Show loading state
     if (elements.myContacts) {
         elements.myContacts.innerHTML = `
             <div class="card">
                 <div class="subtext" style="text-align:center;padding:20px;">
-                    Loading contacts...
+                    ${forceRefresh ? 'Refreshing contacts...' : 'Loading contacts...'}
                 </div>
             </div>
         `;
     }
 
     try {
+        console.log(`${forceRefresh ? 'Force refreshing' : 'Loading'} contacts...`);
+        
+        // Clear cache if force refresh
+        if (forceRefresh) {
+            // Clear any cached contact data
+            try {
+                sessionStorage.removeItem('cached_contacts');
+                localStorage.removeItem('cached_contacts');
+            } catch (e) {
+                // Ignore
+            }
+        }
+        
+        // Fetch fresh contacts
         myContacts = await getContacts() || [];
         console.log("Contacts loaded:", myContacts.length);
+        
+        // Cache the contacts
+        try {
+            sessionStorage.setItem('cached_contacts', JSON.stringify(myContacts));
+        } catch (e) {
+            // Ignore
+        }
+        
         renderContacts(myContacts);
-        
-        // Store contact count for debugging
-        sessionStorage.setItem('contacts_count', myContacts.length.toString());
-        
         return myContacts;
+        
     } catch (error) {
         console.error("Contacts error:", error);
+        
+        // Try to load from cache if available
+        try {
+            const cached = sessionStorage.getItem('cached_contacts');
+            if (cached) {
+                myContacts = JSON.parse(cached);
+                console.log("Loaded contacts from cache:", myContacts.length);
+                renderContacts(myContacts);
+                showToast("Showing cached contacts (refresh failed)");
+                return myContacts;
+            }
+        } catch (e) {
+            // Ignore
+        }
         
         if (elements.myContacts) {
             elements.myContacts.innerHTML = `
@@ -372,7 +412,7 @@ async function loadContactsList() {
                     <div class="subtext" style="text-align:center;padding:20px;color:#e74c3c;">
                         Failed to load contacts
                         <br>
-                        <button class="btn" style="margin-top:10px;" onclick="loadContactsList()">
+                        <button class="btn" style="margin-top:10px;" onclick="loadContactsList(true)">
                             Retry
                         </button>
                     </div>
@@ -412,6 +452,7 @@ function renderContacts(contacts) {
         const card = document.createElement("div");
         card.className = "card";
         card.setAttribute("role", "listitem");
+        card.dataset.contactId = contact.contact_tego_id || contact.id;
 
         const displayName = contact.nickname || contact.contact_username || contact.contact_tego_id;
 
@@ -450,12 +491,6 @@ function renderContacts(contacts) {
             
             try {
                 await deleteContact(contact.id);
-                // Notify chats page about removal
-                try {
-                    localStorage.setItem('contact_removed', Date.now().toString());
-                } catch (e) {
-                    // Ignore
-                }
             } catch (error) {
                 console.error("Remove contact error:", error);
                 showToast("Failed to remove contact");
@@ -464,17 +499,14 @@ function renderContacts(contacts) {
             }
         });
 
-        // Make the whole card clickable to go to chat
         card.addEventListener("click", (event) => {
             if (event.target.closest(".danger-btn")) {
                 return;
             }
             
-            // Save active chat and navigate
             if (typeof saveActiveChat === 'function') {
                 saveActiveChat(contact);
             } else {
-                // Fallback
                 try {
                     localStorage.setItem('active_chat', JSON.stringify(contact));
                 } catch (e) {
@@ -505,18 +537,19 @@ async function deleteContact(id) {
         await removeContact(id);
         showToast("Contact removed");
         
+        // Force refresh
+        await loadContactsList(true);
+        
         // Notify chats page
         try {
             localStorage.setItem('contact_removed', Date.now().toString());
             localStorage.setItem('contacts_last_updated', Date.now().toString());
+            localStorage.setItem('force_contacts_refresh', Date.now().toString());
         } catch (e) {
             // Ignore
         }
         
-        // Reload contacts
-        await loadContactsList();
-        
-        // Update search results if they're visible
+        // Update search results
         if (elements.results && elements.results.children.length > 0) {
             renderSearchResults(contactResults);
         }
@@ -533,7 +566,7 @@ async function deleteContact(id) {
 // ============================================
 function refreshContacts() {
     console.log("Manual refresh triggered");
-    loadContactsList();
+    loadContactsList(true);
 }
 
 // ============================================
@@ -560,7 +593,7 @@ window.refreshContacts = refreshContacts;
 window.addEventListener("beforeunload", cleanup);
 
 // ============================================
-// TOAST NOTIFICATION (if not already defined)
+// TOAST NOTIFICATION
 // ============================================
 if (typeof showToast === 'undefined') {
     window.showToast = function(message) {
@@ -570,7 +603,7 @@ if (typeof showToast === 'undefined') {
 }
 
 // ============================================
-// SAVE ACTIVE CHAT HELPER (if not already defined)
+// SAVE ACTIVE CHAT HELPER
 // ============================================
 if (typeof saveActiveChat === 'undefined') {
     window.saveActiveChat = function(chat) {
