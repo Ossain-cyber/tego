@@ -574,12 +574,11 @@ async function sendMediaMessage({
         mime_type,
 
         message_type:
-        (mime_type || "").startsWith( // ✅ FIX 2: Prevent crash if mime_type is null
-            "image/"
-        )
-        ? "image"
-        : "file",
-
+(mime_type || "").startsWith("image/")
+? "image"
+: (mime_type || "").startsWith("audio/")
+? "audio"
+: "file",
         status:
         "sent"
 
