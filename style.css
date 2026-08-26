@@ -19,6 +19,13 @@
   box-sizing: border-box;
   font-family: Inter, system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease,
+    opacity 0.25s ease;
+  -webkit-font-smoothing: antialiased;
 }
 
 html {
@@ -58,6 +65,7 @@ button {
 .page {
   min-height: 100vh;
   padding-bottom: 90px;
+  animation: pageEnter 0.45s ease both;
 }
 
 .container {
@@ -85,6 +93,7 @@ button {
   border-radius: 32px;
   padding: 28px;
   box-shadow: var(--shadow);
+  animation: authEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .logo-box {
@@ -97,6 +106,7 @@ button {
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 35px rgba(37, 99, 235, 0.45);
+  animation: logoEnter 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .logo-box img {
@@ -137,6 +147,8 @@ button {
 
 .input:focus {
   border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .textarea {
@@ -147,6 +159,11 @@ button {
   background: var(--surface-2);
   border-radius: 16px;
   color: var(--text);
+}
+
+.textarea:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 /* Buttons */
@@ -187,6 +204,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  animation: topbarEnter 0.4s ease both;
 }
 
 .topbar-title {
@@ -208,6 +226,11 @@ button {
   color: white;
 }
 
+.search-input:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 /* Cards */
 .card {
   background: var(--surface);
@@ -216,19 +239,52 @@ button {
   margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: cardEnter 0.35s ease both;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* Card buttons fix */
+.card .btn {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.card > .btn,
+.card > button {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .list-item {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  width: 100%;
   padding: 10px;
   border-radius: 16px;
   min-height: 72px;
+  animation: listEnter 0.35s ease both;
 }
 
 .list-item:active {
   background: rgba(255, 255, 255, 0.04);
+}
+
+.list-item .info {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-item button {
+  flex-shrink: 0;
 }
 
 /* Avatars */
@@ -239,6 +295,7 @@ button {
   object-fit: cover;
   background: var(--surface-2);
   flex-shrink: 0;
+  transition: transform 0.2s ease;
 }
 
 .avatar-xl {
@@ -249,6 +306,7 @@ button {
   display: block;
   margin: 0 auto;
   border: 4px solid var(--primary);
+  animation: avatarEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .avatar-lg {
@@ -258,6 +316,7 @@ button {
   margin: auto;
   object-fit: cover;
   background: var(--surface-2);
+  animation: avatarEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .chat-avatar {
@@ -273,6 +332,7 @@ button {
   font-weight: 700;
   font-size: 18px;
   color: white;
+  transition: transform 0.2s ease;
 }
 
 #avatar-preview {
@@ -284,6 +344,7 @@ button {
   margin: 0 auto 16px;
   background: var(--surface-2);
   border: 3px solid var(--primary);
+  animation: avatarEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* Info */
@@ -322,6 +383,7 @@ button {
   font-size: 12px;
   font-weight: 700;
   color: white;
+  animation: badgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* Chat List */
@@ -330,6 +392,7 @@ button {
   align-items: center;
   gap: 14px;
   padding: 14px;
+  animation: listEnter 0.35s ease both;
 }
 
 .chat-main {
@@ -396,11 +459,16 @@ button {
   font-size: 22px;
 }
 
+.back-btn:active {
+  transform: translateX(-2px) scale(0.92);
+}
+
 .chat-user {
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 1;
+  animation: chatUserEnter 0.35s ease both;
 }
 
 .chat-meta {
@@ -411,6 +479,7 @@ button {
 .chat-status {
   font-size: 12px;
   color: #22c55e;
+  animation: statusFade 2s ease-in-out infinite;
 }
 
 /* Messages */
@@ -418,6 +487,7 @@ button {
   padding: 14px;
   padding-bottom: 100px;
   min-height: calc(100vh - 150px);
+  scroll-behavior: smooth;
 }
 
 .message {
@@ -426,12 +496,14 @@ button {
   border-radius: 18px;
   margin-bottom: 10px;
   word-break: break-word;
+  animation: messageIn 0.25s ease;
 }
 
 .message.me {
   margin-left: auto;
   background: var(--primary);
   border-bottom-right-radius: 6px;
+  animation-name: messageMeEnter;
 }
 
 .message.other {
@@ -552,6 +624,11 @@ button {
   color: white;
 }
 
+#message-input:focus {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
 .composer-btn {
   width: 48px;
   height: 48px;
@@ -559,6 +636,7 @@ button {
   background: var(--surface-2);
   color: white;
   font-size: 22px;
+  transition: transform 0.2s ease;
 }
 
 .send-btn {
@@ -573,6 +651,15 @@ button {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.send-btn:not(:disabled) {
+  animation: sendReady 2.5s ease-in-out infinite;
+}
+
+.send-btn:active {
+  animation: none;
+  transform: scale(0.94);
 }
 
 /* Recording */
@@ -616,6 +703,7 @@ button {
 .nav-btn.active {
   color: var(--primary-light);
   font-weight: 700;
+  animation: navActive 0.3s ease both;
 }
 
 .nav-item {
@@ -629,6 +717,7 @@ button {
 
 .nav-item.active {
   color: var(--primary-light);
+  animation: navActive 0.3s ease both;
 }
 
 /* Profile */
@@ -685,6 +774,7 @@ input[type="file"] {
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 35px rgba(37, 99, 235, 0.45);
+  animation: logoEnter 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 .logo img {
@@ -701,99 +791,124 @@ input[type="file"] {
   border-radius: 50%;
   border: 4px solid rgba(255, 255, 255, 0.1);
   border-top-color: var(--primary);
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  100% {
-    transform: rotate(360deg);
-  }
+  animation: spin 0.8s linear infinite, loaderGlow 1.8s ease-in-out infinite;
 }
 
 .hidden {
-  display: none !important;
+  display: none;
 }
 
 .center {
   display: flex;
   align-items: center;
   justify-content: center;
+  animation: fadeUp 0.45s ease both;
 }
 
-.mt-10 {
-  margin-top: 10px;
-}
-.mt-15 {
-  margin-top: 15px;
-}
-.mt-20 {
-  margin-top: 20px;
-}
-.mt-30 {
-  margin-top: 30px;
-}
-.mb-10 {
-  margin-bottom: 10px;
-}
-.mb-15 {
-  margin-bottom: 15px;
-}
-.mb-20 {
-  margin-bottom: 20px;
+.empty-state {
+  animation: fadeUp 0.45s ease both;
 }
 
-/* Responsive */
-@media (min-width: 768px) {
-  .container {
-    max-width: 850px;
+.mt-10 { margin-top: 10px; }
+.mt-15 { margin-top: 15px; }
+.mt-20 { margin-top: 20px; }
+.mt-30 { margin-top: 30px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+
+/* Scroll to bottom button */
+#scroll-bottom-btn {
+  position: fixed;
+  right: 20px;
+  bottom: 110px;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 22px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Settings actions */
+.settings-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-actions button,
+.settings-actions .btn {
+  width: 100%;
+  margin: 0;
+}
+
+/* Setting item */
+.setting-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  width: 100%;
+}
+
+.setting-item .info {
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
+}
+
+.setting-item button {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.setting-item > button,
+.setting-item > .btn,
+.setting-item > .nav-btn {
+  width: auto;
+  min-width: 44px;
+  height: 44px;
+  padding: 8px 12px;
+}
+
+.setting-item .switch,
+.setting-item input[type="checkbox"] {
+  flex-shrink: 0;
+}
+
+.setting-item .name,
+.setting-item .subtext {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setting-item .name {
+  white-space: nowrap;
+}
+
+.setting-item .subtext {
+  white-space: normal;
+}
+
+.setting-item > div:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Animations */
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
   }
-
-  .chat-wrapper {
-    max-width: 850px;
-    margin: auto;
-  }
-
-  .chat-composer {
-    max-width: 850px;
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 20px 20px 0 0;
-  }
-}
-/* =========================================
-   TEGO SMOOTH UI ANIMATIONS
-========================================= */
-
-/* Global smoothness */
-* {
-  -webkit-font-smoothing: antialiased;
-}
-
-button,
-a,
-.card,
-.list-item,
-.chat-row,
-.nav-btn,
-.nav-item,
-.avatar,
-.input,
-textarea,
-.search-input,
-.composer-btn,
-.send-btn {
-  transition:
-    transform 0.2s ease,
-    opacity 0.2s ease,
-    background-color 0.25s ease,
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
-    color 0.25s ease;
-}
-
-/* Page entrance */
-.page {
-  animation: pageEnter 0.45s ease both;
 }
 
 @keyframes pageEnter {
@@ -801,16 +916,10 @@ textarea,
     opacity: 0;
     transform: translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Top bar */
-.topbar {
-  animation: topbarEnter 0.4s ease both;
 }
 
 @keyframes topbarEnter {
@@ -818,16 +927,10 @@ textarea,
     opacity: 0;
     transform: translateY(-12px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Cards appear smoothly */
-.card {
-  animation: cardEnter 0.35s ease both;
 }
 
 @keyframes cardEnter {
@@ -835,17 +938,10 @@ textarea,
     opacity: 0;
     transform: translateY(8px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Give list items a subtle entrance */
-.list-item,
-.chat-row {
-  animation: listEnter 0.35s ease both;
 }
 
 @keyframes listEnter {
@@ -853,43 +949,162 @@ textarea,
     opacity: 0;
     transform: translateX(-8px);
   }
-
   to {
     opacity: 1;
     transform: translateX(0);
   }
 }
 
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes messageMeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(7px) translateX(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1);
+  }
+}
+
+@keyframes messageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chatUserEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sendReady {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
+  }
+  50% {
+    box-shadow: 0 0 14px rgba(37, 99, 235, 0.18);
+  }
+}
+
+@keyframes statusFade {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes badgePop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes navActive {
+  from {
+    opacity: 0.5;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes avatarEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes authEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes logoEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes loaderGlow {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Stagger list items */
 .list-item:nth-child(1),
-.chat-row:nth-child(1) {
-  animation-delay: 0.03s;
-}
-
+.chat-row:nth-child(1) { animation-delay: 0.03s; }
 .list-item:nth-child(2),
-.chat-row:nth-child(2) {
-  animation-delay: 0.06s;
-}
-
+.chat-row:nth-child(2) { animation-delay: 0.06s; }
 .list-item:nth-child(3),
-.chat-row:nth-child(3) {
-  animation-delay: 0.09s;
-}
-
+.chat-row:nth-child(3) { animation-delay: 0.09s; }
 .list-item:nth-child(4),
-.chat-row:nth-child(4) {
-  animation-delay: 0.12s;
-}
-
+.chat-row:nth-child(4) { animation-delay: 0.12s; }
 .list-item:nth-child(5),
-.chat-row:nth-child(5) {
-  animation-delay: 0.15s;
-}
-
+.chat-row:nth-child(5) { animation-delay: 0.15s; }
 .list-item:nth-child(6),
-.chat-row:nth-child(6) {
-  animation-delay: 0.18s;
-}
+.chat-row:nth-child(6) { animation-delay: 0.18s; }
 
 /* Button press */
 button:active,
@@ -920,253 +1135,41 @@ button:active,
   .nav-btn:hover {
     transform: translateY(-2px);
   }
-}
 
-/* Avatar subtle hover */
-@media (hover: hover) {
   .avatar:hover,
   .chat-avatar:hover {
     transform: scale(1.04);
   }
 }
 
-/* Input focus animation */
-.input:focus,
-textarea:focus,
-#message-input:focus,
-.search-input:focus {
-  transform: translateY(-1px);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-/* Chat messages entrance */
-.message {
-  animation: messageEnter 0.3s ease both;
-}
-
-@keyframes messageEnter {
-  from {
-    opacity: 0;
-    transform: translateY(7px) scale(0.98);
+/* Responsive */
+@media (min-width: 768px) {
+  .container {
+    max-width: 850px;
   }
 
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
+  .chat-wrapper {
+    max-width: 850px;
+    margin: auto;
+  }
+
+  .chat-composer {
+    max-width: 850px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 20px 20px 0 0;
   }
 }
 
-/* Messages from you enter slightly differently */
-.message.me {
-  animation-name: messageMeEnter;
-}
-
-@keyframes messageMeEnter {
-  from {
-    opacity: 0;
-    transform: translateY(7px) translateX(8px) scale(0.97);
+@media (max-width: 600px) {
+  .setting-item {
+    gap: 11px;
+    padding: 12px;
   }
 
-  to {
-    opacity: 1;
-    transform: translateY(0) translateX(0) scale(1);
+  .setting-item button {
+    min-width: 42px;
   }
-}
-
-/* Chat header user */
-.chat-user {
-  animation: chatUserEnter 0.35s ease both;
-}
-
-@keyframes chatUserEnter {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Back button */
-.back-btn:active {
-  transform: translateX(-2px) scale(0.92);
-}
-
-/* Send button pulse when available */
-.send-btn:not(:disabled) {
-  animation: sendReady 2.5s ease-in-out infinite;
-}
-
-@keyframes sendReady {
-  0%,
-  100% {
-    box-shadow: 0 0 0 rgba(37, 99, 235, 0);
-  }
-
-  50% {
-    box-shadow: 0 0 14px rgba(37, 99, 235, 0.18);
-  }
-}
-
-/* Stop pulse while pressing */
-.send-btn:active {
-  animation: none;
-}
-
-/* Online status */
-.chat-status {
-  animation: statusFade 2s ease-in-out infinite;
-}
-
-@keyframes statusFade {
-  0%,
-  100% {
-    opacity: 0.65;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Badge pop */
-.badge {
-  animation: badgePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-
-@keyframes badgePop {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Navigation active item */
-.nav-item.active,
-.nav-btn.active {
-  animation: navActive 0.3s ease both;
-}
-
-@keyframes navActive {
-  from {
-    opacity: 0.5;
-    transform: translateY(3px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Profile avatar entrance */
-.avatar-xl,
-.avatar-lg,
-#avatar-preview {
-  animation: avatarEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-@keyframes avatarEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Auth card entrance */
-.auth-card {
-  animation: authEnter 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-@keyframes authEnter {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* Logo entrance */
-.logo-box,
-.logo {
-  animation: logoEnter 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-@keyframes logoEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.8) rotate(-4deg);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) rotate(0);
-  }
-}
-
-/* Loading animation enhancement */
-.loader {
-  animation:
-    spin 0.8s linear infinite,
-    loaderGlow 1.8s ease-in-out infinite;
-}
-
-@keyframes loaderGlow {
-  0%,
-  100% {
-    opacity: 0.65;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Empty states */
-.empty-state,
-.center {
-  animation: fadeUp 0.45s ease both;
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Smooth scrolling */
-.messages,
-.page,
-.container {
-  scroll-behavior: smooth;
-}
-
-/* Prevent animation from causing horizontal movement */
-body {
-  overflow-x: hidden;
 }
 
 /* Accessibility */
@@ -1180,149 +1183,3 @@ body {
     scroll-behavior: auto !important;
   }
 }
-/* =========================================
-   SETTINGS BUTTON FIX
-========================================= */
-
-.setting-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 64px;
-  width: 100%;
-}
-
-.setting-item .info {
-  flex: 1;
-  min-width: 0;
-  padding-right: 8px;
-}
-
-.setting-item button {
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
-}
-
-/* Buttons inside settings should not overlap text */
-.setting-item > button,
-.setting-item > .btn,
-.setting-item > .nav-btn {
-  width: auto;
-  min-width: 44px;
-  height: 44px;
-  padding: 8px 12px;
-}
-
-/* If a setting has a switch/toggle */
-.setting-item .switch,
-.setting-item input[type="checkbox"] {
-  flex-shrink: 0;
-}
-
-/* Text should stay inside its own space */
-.setting-item .name,
-.setting-item .subtext {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.setting-item .name {
-  white-space: nowrap;
-}
-
-.setting-item .subtext {
-  white-space: normal;
-}
-
-/* Prevent long settings text from pushing buttons */
-.setting-item > div:first-of-type {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Mobile spacing */
-@media (max-width: 600px) {
-  .setting-item {
-    gap: 11px;
-    padding: 12px;
-  }
-
-  .setting-item button {
-    min-width: 42px;
-  }
-}
-#scroll-bottom-btn{
-position:fixed;
-right:20px;
-bottom:110px;
-width:48px;
-height:48px;
-border:none;
-border-radius:50%;
-background:#2563eb;
-color:#fff;
-font-size:22px;
-display:none;
-align-items:center;
-justify-content:center;
-z-index:999;
-box-shadow:0 4px 12px rgba(0,0,0,.3);
-  }
-.list-item{
-display:flex;
-align-items:center;
-gap:12px;
-width:100%;
-}
-
-.list-item .info{
-flex:1;
-min-width:0;
-}
-
-.list-item button{
-flex-shrink:0;
-  }
-.settings-actions{
-display:flex;
-flex-direction:column;
-gap:12px;
-}
-
-.settings-actions button,
-.settings-actions .btn{
-width:100%;
-margin:0;
-  }
-#media-input{
-display:none;
-  }
-
-*{
-transition:
-background-color .25s ease,
-color .25s ease,
-border-color .25s ease,
-transform .25s ease,
-opacity .25s ease;
-}
-
-.message{
-animation:messageIn .25s ease;
-}
-
-@keyframes messageIn{
-
-from{
-opacity:0;
-transform:translateY(10px);
-}
-
-to{
-opacity:1;
-transform:translateY(0);
-}
-
-  }
