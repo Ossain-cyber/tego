@@ -204,31 +204,40 @@ color:white;
 
 .card{
 background:var(--surface);
-border-radius:22px;
-padding:16px;
-margin-bottom:12px;
-border:1px solid rgba(255,255,255,.04);
-}
-
+border-radius:20px;
+padding:14px;
+margin-bottom:10px;
+border:1px solid rgba(255,255,255,.05);
+box-shadow:0 4px 12px rgba(0,0,0,.15);
+  }
 .list-item{
 display:flex;
 align-items:center;
-gap:12px;
-padding:12px;
-border-radius:18px;
-transition:.2s;
+gap:14px;
+padding:10px;
+border-radius:16px;
+min-height:72px;
 }
 
 .list-item:active{
 background:rgba(255,255,255,.04);
-}
-
-.avatar{
-width:54px;
-height:54px;
+}.avatar{
+width:56px;
+height:56px;
 border-radius:50%;
 object-fit:cover;
-background:var(--surface-2);
+background:#1f2937;
+flex-shrink:0;
+}
+
+.avatar-xl{
+width:120px;
+height:120px;
+border-radius:50%;
+object-fit:cover;
+display:block;
+margin:0 auto;
+border:4px solid var(--primary);
 }
 
 .avatar-lg{
@@ -242,15 +251,16 @@ background:var(--surface-2);
 
 .info{
 flex:1;
+overflow:hidden;
 min-width:0;
-}
-
+  }
 .name{
 font-weight:700;
-white-space:nowrap;
+font-size:16px;
 overflow:hidden;
 text-overflow:ellipsis;
-}
+white-space:nowrap;
+  }
 
 .subtext{
 font-size:13px;
@@ -277,15 +287,19 @@ font-weight:700;
 padding:14px;
 padding-bottom:95px;
 }
-
 .message{
-max-width:80%;
+max-width:75%;
 padding:12px 14px;
 border-radius:18px;
 margin-bottom:10px;
-word-wrap:break-word;
+word-break:break-word;
 }
-
+.chat-image{
+max-width:220px;
+max-height:260px;
+border-radius:14px;
+object-fit:cover;
+  }
 .message.me{
 margin-left:auto;
 background:var(--primary);
@@ -337,17 +351,30 @@ font-weight:700;
 
 .bottom-nav{
 position:fixed;
+bottom:0;
 left:0;
 right:0;
-bottom:0;
-height:74px;
-background:rgba(15,23,42,.96);
-backdrop-filter:blur(20px);
+height:70px;
+background:#111827;
 border-top:1px solid rgba(255,255,255,.05);
 display:flex;
-align-items:center;
 justify-content:space-around;
+align-items:center;
 z-index:100;
+}
+.icon-btn,
+.nav-btn{
+background:none;
+border:none;
+color:var(--text-soft);
+font-size:14px;
+padding:10px;
+}
+
+.nav-btn.active{
+color:var(--primary-light);
+font-weight:700;
+  }
   .nav-btn{
 background:none;
 border:none;
