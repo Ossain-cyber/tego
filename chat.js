@@ -75,8 +75,9 @@ async function initChatPage() {
         recordBtn.addEventListener("click", toggleRecording);
     }
 
-    await loadConversation();
+    // Subscribe FIRST, then load to avoid missing realtime updates
     subscribeRealtimeMessages();
+    await loadConversation();
 }
 
 function setupChatHeader() {
@@ -126,6 +127,20 @@ function bindChatEvents() {
     if (mediaInput) {
         mediaInput.addEventListener("change", uploadAndSendMedia);
     }
+
+    // Add scroll event listener for messages container
+    const messagesContainer = document.getElementById("messages");
+    if (messagesContainer) {
+        messagesContainer.addEventListener("scroll", () => {
+            const scrollBtn = document.getElementById("scroll-bottom-btn");
+            if (scrollBtn) {
+                const distance = messagesContainer.scrollHeight - 
+                               messagesContainer.scrollTop - 
+                               messagesContainer.clientHeight;
+                scrollBtn.style.display = distance > 200 ? "flex" : "none";
+            }
+        });
+    }
 }
 
 async function loadConversation() {
@@ -156,6 +171,7 @@ async function loadConversation() {
             
             allMessagesCache = filteredMessages;
             renderMessages(filteredMessages);
+            scrollMessagesToBottom();
         } else {
             // Filter for this specific conversation
             const conversationMessages = (allUserMessages || []).filter(msg => 
@@ -165,6 +181,7 @@ async function loadConversation() {
             
             allMessagesCache = conversationMessages;
             renderMessages(conversationMessages);
+            scrollMessagesToBottom();
         }
         
         await markMessagesRead(activeChat.contact_tego_id);
@@ -172,6 +189,7 @@ async function loadConversation() {
         console.error("Load error:", error);
         // If all else fails, keep showing cached messages
         renderMessages(allMessagesCache);
+        scrollMessagesToBottom();
         showToast("Unable to refresh messages");
     }
 }
@@ -281,13 +299,18 @@ function renderMessages(messages) {
 }
 
 function getStatusIcon(status) {
-    if (status === "read") {
-        return "✓✓";
+    switch(status) {
+        case "sending":
+            return "⏳";
+        case "failed":
+            return "❌";
+        case "read":
+            return "✓✓";
+        case "delivered":
+            return "✓✓";
+        default:
+            return "✓";
     }
-    if (status === "delivered") {
-        return "✓✓";
-    }
-    return "✓";
 }
 
 async function sendTextMessage() {
@@ -298,10 +321,31 @@ async function sendTextMessage() {
         return;
     }
     
+    // Create optimistic message
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage = {
+        id: tempId,
+        sender_id: APP.user.id,
+        receiver_id: activeChat.contact_auth_id,
+        sender_tego_id: currentProfile.tego_id,
+        receiver_tego_id: activeChat.contact_tego_id,
+        message: text,
+        message_type: "text",
+        reply_to_id: replyingTo?.id || null,
+        reply_text: replyingTo?.message || replyingTo?.file_name || "Media",
+        status: "sending",
+        created_at: new Date().toISOString()
+    };
+    
+    // Add to cache immediately for instant feedback
+    allMessagesCache.push(optimisticMessage);
+    renderMessages(allMessagesCache);
+    
+    input.value = "";
+    replyingTo = null;
+    document.getElementById("reply-preview").classList.add("hidden");
+    
     try {
-        input.value = "";
-        
-        // Create the message object
         const messageData = {
             sender_id: APP.user.id,
             receiver_id: activeChat.contact_auth_id,
@@ -309,12 +353,11 @@ async function sendTextMessage() {
             receiver_tego_id: activeChat.contact_tego_id,
             message: text,
             message_type: "text",
-            reply_to_id: replyingTo?.id || null,
-            reply_text: replyingTo?.message || replyingTo?.file_name || "Media",
+            reply_to_id: optimisticMessage.reply_to_id,
+            reply_text: optimisticMessage.reply_text,
             status: "delivered"
         };
         
-        // Send the message
         const { data, error } = await APP.supabase
             .from("messages")
             .insert([messageData])
@@ -325,25 +368,31 @@ async function sendTextMessage() {
             throw error;
         }
         
-        // Add to cache immediately
-        allMessagesCache.push(data);
-        
-        replyingTo = null;
-        document.getElementById("reply-preview").classList.add("hidden");
-        
-        // Render from cache to prevent disappearing
+        // Replace temp message with actual
+        const index = allMessagesCache.findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            allMessagesCache[index] = data;
+        }
         renderMessages(allMessagesCache);
-        
-        // Don't reload immediately - let realtime handle it
-        // await loadConversation();
     } catch (error) {
         console.error("Send error:", error);
-        showToast("Message failed");
+        
+        // Mark message as failed
+        const index = allMessagesCache.findIndex(m => m.id === tempId);
+        if (index !== -1) {
+            allMessagesCache[index].status = "failed";
+        }
+        renderMessages(allMessagesCache);
+        showToast("Message failed to send");
     }
 }
 
 async function uploadAndSendMedia(event) {
     let file = event.target.files[0];
+    
+    if (!file) {
+        return;
+    }
     
     if (file.type.startsWith("image/")) {
         file = await compressImage(file);
@@ -356,11 +405,8 @@ async function uploadAndSendMedia(event) {
         return;
     }
 
-    if (!file) {
-        return;
-    }
-
     try {
+        showToast("Uploading...");
         const url = await uploadMedia(file);
         const type = file.type.startsWith("image/") ? "image" : 
                     file.type.startsWith("audio/") ? "audio" : "file";
@@ -396,6 +442,7 @@ async function uploadAndSendMedia(event) {
     } catch (error) {
         console.error("Upload error:", error);
         showToast("Upload failed");
+        event.target.value = "";
     }
 }
 
@@ -475,6 +522,11 @@ async function toggleRecording() {
         };
         
         mediaRecorder.onstop = async () => {
+            // Stop all audio tracks
+            if (mediaRecorder.stream) {
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+            
             const blob = new Blob(audioChunks, {
                 type: "audio/webm"
             });
@@ -529,23 +581,15 @@ async function toggleRecording() {
 }
 
 function scrollMessagesToBottom() {
-
-    const container =
-    document.getElementById(
-        "messages"
-    );
-
+    const container = document.getElementById("messages");
     if (!container) {
         return;
     }
-
-    requestAnimationFrame(() => {
-
-        container.scrollTop =
-        container.scrollHeight;
-
+    
+    container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth"
     });
-
 }
 
 function escapeHtml(text) {
@@ -555,6 +599,15 @@ function escapeHtml(text) {
 }
 
 window.addEventListener("beforeunload", () => {
+    // Stop recording if active
+    if (isRecording && mediaRecorder) {
+        mediaRecorder.stop();
+        if (mediaRecorder.stream) {
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        }
+    }
+    
+    // Remove channel
     if (messagesChannel && APP.supabase) {
         APP.supabase.removeChannel(messagesChannel);
     }
@@ -596,50 +649,12 @@ async function deleteMessage(messageId) {
         showToast("Delete failed");
     }
 }
-document.addEventListener(
-"DOMContentLoaded",
-() => {
 
-const messagesBox =
-document.getElementById(
-"messages"
-);
-
-const scrollBtn =
-document.getElementById(
-"scroll-bottom-btn"
-);
-
-if(
-!messagesBox ||
-!scrollBtn
-){
-return;
-}
-
-messagesBox.addEventListener(
-"scroll",
-() => {
-
-const distance =
-messagesBox.scrollHeight -
-messagesBox.scrollTop -
-messagesBox.clientHeight;
-
-scrollBtn.style.display =
-distance > 200
-? "flex"
-: "none";
-
-}
-);
-
-scrollBtn.addEventListener(
-"click",
-scrollMessagesToBottom
-);
-
-}
-);
+// Global click handler for scroll button
+document.addEventListener("click", event => {
+    if (event.target.id === "scroll-bottom-btn") {
+        scrollMessagesToBottom();
+    }
+});
 
 window.initChatPage = initChatPage;
