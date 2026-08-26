@@ -5,15 +5,6 @@ let messagesChannel = null;
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
-let isPageVisible = true;
-
-// Add visibility change listener to reload messages when tab becomes visible
-document.addEventListener('visibilitychange', () => {
-    isPageVisible = !document.hidden;
-    if (isPageVisible && activeChat && currentProfile) {
-        loadConversation();
-    }
-});
 
 async function compressImage(file) {
     return new Promise((resolve, reject) => {
@@ -40,77 +31,60 @@ async function compressImage(file) {
                 canvas.height = height;
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(img, 0, 0, width, height);
-                
                 canvas.toBlob(
                     blob => {
-                        if (blob) {
-                            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
-                                type: "image/jpeg"
-                            }));
-                        } else {
-                            reject(new Error("Failed to compress image"));
-                        }
+                        resolve(new File([blob], file.name, {
+                            type: "image/jpeg"
+                        }));
                     },
                     "image/jpeg",
                     0.7
                 );
             };
-            img.onerror = () => reject(new Error("Failed to load image"));
             img.src = e.target.result;
         };
-        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.onerror = reject;
         reader.readAsDataURL(file);
     });
 }
 
 async function initChatPage() {
-    try {
-        const authenticated = await requireAuth();
-        if (!authenticated) {
-            return;
-        }
-
-        activeChat = getActiveChat();
-        if (!activeChat) {
-            window.location.href = "chats.html";
-            return;
-        }
-
-        currentProfile = await getMyProfile();
-        if (!currentProfile) {
-            window.location.href = "profile.html";
-            return;
-        }
-
-        setupChatHeader();
-        bindChatEvents();
-        
-        const recordBtn = document.getElementById("record-btn");
-        if (recordBtn) {
-            recordBtn.addEventListener("click", toggleRecording);
-        }
-
-        await loadConversation();
-        subscribeRealtimeMessages();
-        
-        console.log('Chat initialized:', {
-            activeChat,
-            currentProfileTegoId: currentProfile.tego_id,
-            contactTegoId: activeChat.contact_tego_id
-        });
-    } catch (error) {
-        console.error('Init chat error:', error);
-        showToast("Failed to initialize chat");
+    const authenticated = await requireAuth();
+    if (!authenticated) {
+        return;
     }
+
+    activeChat = getActiveChat();
+    if (!activeChat) {
+        window.location.href = "chats.html";
+        return;
+    }
+
+    currentProfile = await getMyProfile();
+    if (!currentProfile) {
+        window.location.href = "profile.html";
+        return;
+    }
+
+    // Debug alert to verify data
+    alert(`Chat initialized:\nMy Tego ID: ${currentProfile.tego_id}\nContact Tego ID: ${activeChat.contact_tego_id}`);
+
+    setupChatHeader();
+    bindChatEvents();
+    
+    const recordBtn = document.getElementById("record-btn");
+    if (recordBtn) {
+        recordBtn.addEventListener("click", toggleRecording);
+    }
+
+    await loadConversation();
+    subscribeRealtimeMessages();
 }
 
 function setupChatHeader() {
     const avatar = document.getElementById("chat-avatar");
     if (avatar && activeChat.avatar_url) {
         avatar.src = activeChat.avatar_url;
-        avatar.onerror = () => {
-            avatar.src = 'default-avatar.png'; // Add a default avatar
-        };
     }
     
     const name = document.getElementById("chat-name");
@@ -125,7 +99,6 @@ function bindChatEvents() {
         cancelReply.addEventListener("click", () => {
             replyingTo = null;
             document.getElementById("reply-preview").classList.add("hidden");
-            document.getElementById("reply-text").textContent = "";
         });
     }
 
@@ -137,19 +110,11 @@ function bindChatEvents() {
     const input = document.getElementById("message-input");
     if (input) {
         input.addEventListener("keydown", event => {
-            if (event.key === "Enter" && !event.shiftKey) {
+            if (event.key === "Enter") {
                 event.preventDefault();
                 sendTextMessage();
             }
         });
-        
-        // Auto-resize textarea if it's a textarea
-        if (input.tagName === 'TEXTAREA') {
-            input.addEventListener('input', () => {
-                input.style.height = 'auto';
-                input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-            });
-        }
     }
 
     const mediaBtn = document.getElementById("media-btn");
@@ -166,29 +131,63 @@ function bindChatEvents() {
 }
 
 async function loadConversation() {
-    if (!currentProfile || !activeChat) {
-        console.error('Missing profile or chat');
-        return;
-    }
-    
     try {
-        const { data, error } = await APP.supabase
+        // Try multiple query approaches
+        let messages = [];
+        let error = null;
+        
+        // First approach: Simple OR query
+        const result = await APP.supabase
             .from("messages")
             .select("*")
-            .or(
-                `and(sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${activeChat.contact_tego_id}),and(sender_tego_id.eq.${activeChat.contact_tego_id},receiver_tego_id.eq.${currentProfile.tego_id})`
-            )
+            .or(`sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${currentProfile.tego_id}`)
             .order("created_at", { ascending: true });
-
+            
+        if (!result.error && result.data) {
+            // Filter messages for this specific conversation
+            messages = result.data.filter(msg => 
+                (msg.sender_tego_id === currentProfile.tego_id && msg.receiver_tego_id === activeChat.contact_tego_id) ||
+                (msg.sender_tego_id === activeChat.contact_tego_id && msg.receiver_tego_id === currentProfile.tego_id)
+            );
+        } else {
+            error = result.error;
+            
+            // Fallback: Try two separate queries
+            if (error) {
+                const [sentResult, receivedResult] = await Promise.all([
+                    APP.supabase
+                        .from("messages")
+                        .select("*")
+                        .eq("sender_tego_id", currentProfile.tego_id)
+                        .eq("receiver_tego_id", activeChat.contact_tego_id),
+                    APP.supabase
+                        .from("messages")
+                        .select("*")
+                        .eq("sender_tego_id", activeChat.contact_tego_id)
+                        .eq("receiver_tego_id", currentProfile.tego_id)
+                ]);
+                
+                if (!sentResult.error && !receivedResult.error) {
+                    messages = [...(sentResult.data || []), ...(receivedResult.data || [])]
+                        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    error = null;
+                } else {
+                    error = sentResult.error || receivedResult.error;
+                }
+            }
+        }
+        
         if (error) {
             throw error;
         }
-
-        console.log('Loaded messages:', data?.length || 0);
-        renderMessages(data || []);
+        
+        // Alert to see how many messages loaded
+        alert(`Loaded ${messages.length} messages`);
+        
+        renderMessages(messages);
         await markMessagesRead(activeChat.contact_tego_id);
     } catch (error) {
-        console.error('Load conversation error:', error);
+        alert(`Error loading messages: ${error.message || error}`);
         showToast("Unable to load messages");
     }
 }
@@ -201,22 +200,20 @@ function renderMessages(messages) {
     
     container.innerHTML = "";
     
-    if (!messages || messages.length === 0) {
+    if (messages.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
-                <p>No messages yet</p>
-                <p class="text-sm text-gray-500">Say hello! 👋</p>
+                No messages yet
             </div>
         `;
         return;
     }
     
     messages.forEach(message => {
-        // Use sender_tego_id to determine if message is mine
+        // Use tego_id to determine if message is mine
         const mine = message.sender_tego_id === currentProfile.tego_id;
         const item = document.createElement("div");
-        item.className = `message ${mine ? "me" : "other"} ${message.status || ''}`;
-        item.dataset.messageId = message.id;
+        item.className = mine ? "message me" : "message other";
         
         let body = "";
         
@@ -224,24 +221,18 @@ function renderMessages(messages) {
             body = `<i>Message deleted</i>`;
         } else if (message.mime_type && message.mime_type.startsWith("audio/")) {
             body = `
-                <audio controls preload="metadata">
+                <audio controls>
                     <source src="${message.media_url}" type="${message.mime_type}">
-                    Your browser does not support the audio element.
                 </audio>
             `;
-        } else if (message.message_type === "image" && message.media_url) {
+        } else if (message.message_type === "image") {
             body = `
-                <img src="${message.media_url}" class="chat-image" loading="lazy" 
-                     onclick="window.open(this.src, '_blank')">
+                <img src="${message.media_url}" class="chat-image" loading="lazy">
             `;
-        } else if (message.message_type === "file" && message.media_url) {
+        } else if (message.message_type === "file") {
             body = `
-                <a href="${message.media_url}" target="_blank" class="file-link" download>
-                    <div class="file-info">
-                        <span class="file-icon">📎</span>
-                        <span>${escapeHtml(message.file_name || "Download File")}</span>
-                        ${message.file_size ? `<span class="file-size">${formatFileSize(message.file_size)}</span>` : ''}
-                    </div>
+                <a href="${message.media_url}" target="_blank" class="file-link">
+                    ${message.file_name || "Download File"}
                 </a>
             `;
         } else {
@@ -257,9 +248,7 @@ function renderMessages(messages) {
             <div class="message-body">
                 ${body}
             </div>
-            <button class="reply-btn" data-id="${message.id}" title="Reply">
-                ↩️
-            </button>
+            <button class="reply-btn" data-id="${message.id}">Reply</button>
             <div class="message-footer">
                 <div class="message-time">
                     ${formatTime(message.created_at)}
@@ -271,59 +260,45 @@ function renderMessages(messages) {
                 ` : ""}
             </div>
             
-            ${mine && !message.deleted_at ? `
-                <button class="delete-message-btn" data-id="${message.id}" title="Delete">
-                    🗑️
+            ${mine ? `
+                <button class="delete-message-btn" data-id="${message.id}">
+                    Delete
                 </button>
             ` : ""}
         `;
         
         container.appendChild(item);
         
-        // Bind events using event delegation instead of individual listeners
-    });
-    
-    // Use event delegation for better performance
-    container.onclick = (event) => {
-        const replyBtn = event.target.closest('.reply-btn');
+        const replyBtn = item.querySelector(".reply-btn");
         if (replyBtn) {
-            const messageId = replyBtn.dataset.id;
-            const message = messages.find(m => m.id === messageId);
-            if (message) {
+            replyBtn.addEventListener("click", () => {
                 replyingTo = message;
-                const replyPreview = document.getElementById("reply-preview");
-                const replyText = document.getElementById("reply-text");
-                if (replyPreview && replyText) {
-                    replyPreview.classList.remove("hidden");
-                    replyText.textContent = message.message || message.file_name || "Media";
-                }
-                document.getElementById("message-input")?.focus();
-            }
+                document.getElementById("reply-preview").classList.remove("hidden");
+                document.getElementById("reply-text").textContent = message.message || message.file_name || "Media";
+            });
         }
         
-        const deleteBtn = event.target.closest('.delete-message-btn');
+        const deleteBtn = item.querySelector(".delete-message-btn");
         if (deleteBtn) {
-            const messageId = deleteBtn.dataset.id;
-            if (confirm("Delete this message?")) {
-                deleteMessage(messageId);
-            }
+            deleteBtn.addEventListener("click", async () => {
+                if (confirm("Delete this message?")) {
+                    await deleteMessage(message.id);
+                }
+            });
         }
-    };
+    });
     
     scrollMessagesToBottom();
 }
 
 function getStatusIcon(status) {
-    switch(status) {
-        case "read":
-            return "✓✓";
-        case "delivered":
-            return "✓✓"; // Use different styling in CSS to differentiate
-        case "sent":
-            return "✓";
-        default:
-            return "✓";
+    if (status === "read") {
+        return "✓✓";
     }
+    if (status === "delivered") {
+        return "✓✓";
+    }
+    return "✓";
 }
 
 async function sendTextMessage() {
@@ -334,30 +309,11 @@ async function sendTextMessage() {
         return;
     }
     
-    const sendBtn = document.getElementById("send-btn");
-    
     try {
-        // Disable send button to prevent double sends
-        if (sendBtn) sendBtn.disabled = true;
         input.value = "";
         
-        // Create temporary message for optimistic UI
-        const tempMessage = {
-            id: `temp-${Date.now()}`,
-            sender_tego_id: currentProfile.tego_id,
-            receiver_tego_id: activeChat.contact_tego_id,
-            message: text,
-            message_type: "text",
-            created_at: new Date().toISOString(),
-            status: "sending",
-            reply_to_id: replyingTo?.id || null,
-            reply_text: replyingTo?.message || replyingTo?.file_name || "Media"
-        };
-        
-        // Add temp message to UI immediately
-        addTempMessage(tempMessage);
-        
-        const result = await sendMessage({
+        // Create the message object
+        const messageData = {
             sender_id: APP.user.id,
             receiver_id: activeChat.contact_auth_id,
             sender_tego_id: currentProfile.tego_id,
@@ -367,95 +323,98 @@ async function sendTextMessage() {
             reply_to_id: replyingTo?.id || null,
             reply_text: replyingTo?.message || replyingTo?.file_name || "Media",
             status: "delivered"
-        });
+        };
         
-        console.log('Message sent result:', result);
+        // Show what we're sending
+        alert(`Sending message:\nFrom: ${messageData.sender_tego_id}\nTo: ${messageData.receiver_tego_id}\nText: ${text}`);
+        
+        // Send the message directly using supabase
+        const { data, error } = await APP.supabase
+            .from("messages")
+            .insert([messageData])
+            .select()
+            .single();
+            
+        if (error) {
+            alert(`Error sending: ${error.message}`);
+            throw error;
+        }
+        
+        alert(`Message sent successfully! ID: ${data.id}`);
         
         replyingTo = null;
-        const replyPreview = document.getElementById("reply-preview");
-        if (replyPreview) replyPreview.classList.add("hidden");
+        document.getElementById("reply-preview").classList.add("hidden");
         
-        // Reload conversation to get the actual message with proper ID
+        // Add the message to UI immediately
+        addMessageToUI(data);
+        
+        // Reload conversation
         await loadConversation();
     } catch (error) {
-        console.error('Send message error:', error);
-        showToast("Message failed to send");
-        // Restore the input value
-        input.value = text;
-    } finally {
-        if (sendBtn) sendBtn.disabled = false;
-        input.focus();
+        alert(`Send failed: ${error.message || error}`);
+        showToast("Message failed");
     }
 }
 
-function addTempMessage(message) {
+function addMessageToUI(message) {
     const container = document.getElementById("messages");
     if (!container) return;
     
-    // Remove empty state if present
     const emptyState = container.querySelector('.empty-state');
     if (emptyState) emptyState.remove();
     
-    const tempDiv = document.createElement("div");
-    tempDiv.className = "message me sending";
-    tempDiv.dataset.tempId = message.id;
-    tempDiv.innerHTML = `
-        ${message.reply_text ? `
-            <div class="reply-bubble">
-                ${escapeHtml(message.reply_text)}
-            </div>
-        ` : ""}
+    const item = document.createElement("div");
+    item.className = "message me";
+    
+    let body = escapeHtml(message.message || "");
+    
+    item.innerHTML = `
         <div class="message-body">
-            ${escapeHtml(message.message)}
+            ${body}
         </div>
+        <button class="reply-btn" data-id="${message.id}">Reply</button>
         <div class="message-footer">
             <div class="message-time">
                 ${formatTime(message.created_at)}
             </div>
             <div class="message-status">
-                ⏳
+                ${getStatusIcon(message.status)}
             </div>
         </div>
+        <button class="delete-message-btn" data-id="${message.id}">
+            Delete
+        </button>
     `;
-    container.appendChild(tempDiv);
+    
+    container.appendChild(item);
     scrollMessagesToBottom();
 }
 
 async function uploadAndSendMedia(event) {
-    const fileInput = event.target;
-    let file = fileInput.files[0];
+    let file = event.target.files[0];
     
-    if (!file) return;
+    if (file.type.startsWith("image/")) {
+        file = await compressImage(file);
+    }
     
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+        showToast("Maximum file size is 5MB");
+        event.target.value = "";
+        return;
+    }
+
+    if (!file) {
+        return;
+    }
+
     try {
-        // Validate file type
-        const allowedTypes = ['image/', 'audio/', 'video/', 'application/pdf', 'text/'];
-        if (!allowedTypes.some(type => file.type.startsWith(type))) {
-            showToast("Unsupported file type");
-            fileInput.value = "";
-            return;
-        }
-        
-        // Compress images
-        if (file.type.startsWith("image/")) {
-            file = await compressImage(file);
-        }
-        
-        // Check file size
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-        if (file.size > MAX_FILE_SIZE) {
-            showToast("Maximum file size is 5MB");
-            fileInput.value = "";
-            return;
-        }
-        
-        showToast("Uploading...");
-        
         const url = await uploadMedia(file);
         const type = file.type.startsWith("image/") ? "image" : 
                     file.type.startsWith("audio/") ? "audio" : "file";
-        
-        await sendMediaMessage({
+
+        const messageData = {
+            sender_id: APP.user.id,
             receiver_id: activeChat.contact_auth_id,
             sender_tego_id: currentProfile.tego_id,
             receiver_tego_id: activeChat.contact_tego_id,
@@ -463,51 +422,60 @@ async function uploadAndSendMedia(event) {
             file_name: file.name,
             file_size: file.size,
             mime_type: file.type,
-            message_type: type
-        });
+            message_type: type,
+            status: "delivered"
+        };
+        
+        alert(`Sending media:\nType: ${type}\nName: ${file.name}`);
+        
+        const { data, error } = await APP.supabase
+            .from("messages")
+            .insert([messageData])
+            .select()
+            .single();
+            
+        if (error) {
+            alert(`Error sending media: ${error.message}`);
+            throw error;
+        }
+        
+        alert("Media sent successfully!");
         
         await loadConversation();
-        fileInput.value = "";
+        event.target.value = "";
     } catch (error) {
-        console.error('Upload error:', error);
-        showToast("Upload failed: " + (error.message || "Unknown error"));
-        fileInput.value = "";
+        alert(`Upload failed: ${error.message || error}`);
+        showToast("Upload failed");
     }
 }
 
 function subscribeRealtimeMessages() {
-    // Clean up existing subscription
+    // Remove existing channel
     if (messagesChannel) {
         APP.supabase.removeChannel(messagesChannel);
-        messagesChannel = null;
     }
     
-    if (!currentProfile || !activeChat) return;
-    
-    // Create realtime subscription for this specific conversation
+    // Simple realtime subscription
     messagesChannel = APP.supabase
-        .channel(`messages-${currentProfile.tego_id}-${activeChat.contact_tego_id}`)
+        .channel('messages-channel')
         .on(
             'postgres_changes',
             {
                 event: '*',
                 schema: 'public',
-                table: 'messages',
-                filter: `or(and(sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${activeChat.contact_tego_id}),and(sender_tego_id.eq.${activeChat.contact_tego_id},receiver_tego_id.eq.${currentProfile.tego_id}))`
+                table: 'messages'
             },
             async (payload) => {
-                console.log('Realtime message event:', payload.eventType);
-                if (isPageVisible) {
+                // Check if this message is relevant to our conversation
+                const newMsg = payload.new;
+                if (newMsg && 
+                    ((newMsg.sender_tego_id === currentProfile.tego_id && newMsg.receiver_tego_id === activeChat.contact_tego_id) ||
+                     (newMsg.sender_tego_id === activeChat.contact_tego_id && newMsg.receiver_tego_id === currentProfile.tego_id))) {
                     await loadConversation();
                 }
             }
         )
-        .subscribe((status) => {
-            console.log('Realtime subscription status:', status);
-            if (status === 'SUBSCRIBED') {
-                console.log('Successfully subscribed to messages');
-            }
-        });
+        .subscribe();
 }
 
 async function toggleRecording() {
@@ -517,13 +485,10 @@ async function toggleRecording() {
         let stream;
         try {
             stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true
-                }
+                audio: true
             });
         } catch (error) {
-            console.error('Microphone error:', error);
+            alert("Microphone permission denied");
             showToast("Microphone permission denied");
             return;
         }
@@ -532,64 +497,57 @@ async function toggleRecording() {
         mediaRecorder = new MediaRecorder(stream);
         
         mediaRecorder.ondataavailable = event => {
-            if (event.data.size > 0) {
-                audioChunks.push(event.data);
-            }
+            audioChunks.push(event.data);
         };
         
         mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, {
+                type: "audio/webm"
+            });
+            const file = new File([blob], `voice-${Date.now()}.webm`, {
+                type: "audio/webm"
+            });
+            
             try {
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
-                
-                if (audioChunks.length === 0) {
-                    showToast("Recording was empty");
-                    return;
-                }
-                
-                const blob = new Blob(audioChunks, {
-                    type: mediaRecorder.mimeType || "audio/webm"
-                });
-                
-                if (blob.size > 5 * 1024 * 1024) {
-                    showToast("Recording too large (max 5MB)");
-                    return;
-                }
-                
-                const file = new File([blob], `voice-${Date.now()}.webm`, {
-                    type: mediaRecorder.mimeType || "audio/webm"
-                });
-                
-                showToast("Uploading audio...");
                 const url = await uploadMedia(file);
                 
-                await sendMediaMessage({
+                const messageData = {
+                    sender_id: APP.user.id,
                     receiver_id: activeChat.contact_auth_id,
                     sender_tego_id: currentProfile.tego_id,
                     receiver_tego_id: activeChat.contact_tego_id,
                     media_url: url,
                     file_name: file.name,
                     file_size: file.size,
-                    mime_type: file.type,
-                    message_type: "audio"
-                });
+                    mime_type: "audio/webm",
+                    message_type: "audio",
+                    status: "delivered"
+                };
+                
+                const { data, error } = await APP.supabase
+                    .from("messages")
+                    .insert([messageData])
+                    .select()
+                    .single();
+                    
+                if (error) {
+                    alert(`Error sending audio: ${error.message}`);
+                    throw error;
+                }
                 
                 await loadConversation();
             } catch (error) {
-                console.error('Audio upload error:', error);
-                showToast("Failed to send audio message");
+                alert(`Audio upload failed: ${error.message || error}`);
+                showToast("Failed to send audio");
             }
         };
         
-        mediaRecorder.start(1000); // Collect data every second
+        mediaRecorder.start();
         isRecording = true;
         button.classList.add("recording");
-        button.textContent = "■ Stop";
-        button.disabled = false;
+        button.textContent = "■";
     } else {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
+        mediaRecorder.stop();
         isRecording = false;
         button.classList.remove("recording");
         button.textContent = "🎤";
@@ -602,76 +560,49 @@ function scrollMessagesToBottom() {
         return;
     }
     
-    // Use requestAnimationFrame for smoother scrolling
-    requestAnimationFrame(() => {
+    setTimeout(() => {
         container.scrollTop = container.scrollHeight;
-    });
+    }, 50);
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
 }
 
-function formatFileSize(bytes) {
-    if (!bytes) return '';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
 window.addEventListener("beforeunload", () => {
     if (messagesChannel && APP.supabase) {
         APP.supabase.removeChannel(messagesChannel);
-        messagesChannel = null;
-    }
-    
-    // Stop recording if in progress
-    if (isRecording && mediaRecorder) {
-        mediaRecorder.stop();
-        isRecording = false;
     }
 });
 
 async function markMessagesRead(senderTegoId) {
     try {
-        const { data, error } = await APP.supabase
+        await APP.supabase
             .from("messages")
             .update({ status: "read" })
             .eq("sender_tego_id", senderTegoId)
             .eq("receiver_tego_id", currentProfile.tego_id)
-            .neq("status", "read")
-            .select();
-            
-        if (error) {
-            console.error('Mark read error:', error);
-        } else if (data && data.length > 0) {
-            console.log('Marked messages as read:', data.length);
-        }
+            .neq("status", "read");
     } catch (error) {
-        console.error('Mark read error:', error);
+        console.error("Error marking messages read:", error);
     }
 }
 
 async function deleteMessage(messageId) {
     try {
-        const { data, error } = await APP.supabase
+        await APP.supabase
             .from("messages")
             .update({
                 message: "Message deleted",
                 deleted_at: new Date().toISOString(),
                 edited_at: new Date().toISOString()
             })
-            .eq("id", messageId)
-            .select();
-            
-        if (error) throw error;
+            .eq("id", messageId);
         
         await loadConversation();
     } catch (error) {
-        console.error('Delete error:', error);
         showToast("Delete failed");
     }
 }
