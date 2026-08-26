@@ -12,13 +12,6 @@ const UI = {
     DEFAULT_AVATAR: "icon-192.png"
 };
 
-const ERROR_CODES = {
-    DUPLICATE_CONTACT: 'DUPLICATE_CONTACT',
-    NETWORK_ERROR: 'NETWORK_ERROR',
-    UNAUTHORIZED: 'UNAUTHORIZED',
-    NOT_FOUND: 'NOT_FOUND'
-};
-
 // ============================================
 // STATE
 // ============================================
@@ -45,29 +38,22 @@ function cacheElements() {
 // ============================================
 async function initContactsPage() {
     try {
-        // Cache DOM elements
         cacheElements();
 
-        // Authentication check
         const authenticated = await requireAuth();
         if (!authenticated) {
             return;
         }
 
-        // Load user profile
         myProfile = await getMyProfile();
         if (!myProfile) {
-            navigateTo(ROUTES.PROFILE);
+            window.location.href = ROUTES.PROFILE;
             return;
         }
 
-        // Setup event listeners
         bindContactsEvents();
-
-        // Load initial contacts
         await loadContactsList();
 
-        // Subscribe to real-time updates
         subscribeContacts(async () => {
             await loadContactsList();
         });
@@ -79,17 +65,9 @@ async function initContactsPage() {
 }
 
 // ============================================
-// NAVIGATION
-// ============================================
-function navigateTo(route) {
-    window.location.href = route;
-}
-
-// ============================================
 // EVENT BINDING
 // ============================================
 function bindContactsEvents() {
-    // Cleanup previous controller if exists
     if (abortController) {
         abortController.abort();
     }
@@ -112,26 +90,14 @@ function handleSearchInput() {
 
     const value = elements.search?.value?.trim() || "";
 
-    if (value.length < UI.MIN_SEARCH_LENGTH) {
-        clearSearchResults();
+    if (value.length < 2) {
+        if (elements.results) {
+            elements.results.innerHTML = "";
+        }
         return;
     }
 
     // Show loading state
-    showSearchLoading();
-
-    searchTimeout = setTimeout(async () => {
-        await searchUsers(value);
-    }, UI.DEBOUNCE_DELAY);
-}
-
-function clearSearchResults() {
-    if (elements.results) {
-        elements.results.innerHTML = "";
-    }
-}
-
-function showSearchLoading() {
     if (elements.results) {
         elements.results.innerHTML = `
             <div class="card">
@@ -141,6 +107,10 @@ function showSearchLoading() {
             </div>
         `;
     }
+
+    searchTimeout = setTimeout(async () => {
+        await searchUsers(value);
+    }, 300);
 }
 
 // ============================================
@@ -153,14 +123,8 @@ async function searchUsers(query) {
         renderSearchResults(contactResults);
     } catch (error) {
         console.error("Search error:", error);
+        showToast("Search failed");
         
-        if (error.message?.includes("network")) {
-            showToast("Network error, please try again");
-        } else {
-            showToast("Search failed");
-        }
-        
-        // Show error state
         if (elements.results) {
             elements.results.innerHTML = `
                 <div class="card">
@@ -180,6 +144,7 @@ function renderSearchResults(users) {
     if (!elements.results) return;
 
     const fragment = document.createDocumentFragment();
+    let hasResults = false;
 
     users.forEach(user => {
         // Skip current user
@@ -187,13 +152,65 @@ function renderSearchResults(users) {
             return;
         }
 
-        const card = createSearchResultCard(user);
+        const exists = myContacts.some(
+            contact => contact.contact_tego_id === user.tego_id
+        );
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.setAttribute("role", "listitem");
+
+        // Keep original avatar URL structure - just use what comes from the API
+        const avatarUrl = user.avatar_url || UI.DEFAULT_AVATAR;
+        const displayName = user.display_name || user.username || user.tego_id;
+
+        card.innerHTML = `
+            <div class="list-item">
+                <img 
+                    class="avatar" 
+                    src="${avatarUrl}"
+                    alt="${displayName}'s avatar"
+                    loading="lazy"
+                    onerror="this.src='${UI.DEFAULT_AVATAR}'"
+                >
+                <div class="info">
+                    <div class="name">${displayName}</div>
+                    <div class="subtext">${user.tego_id}</div>
+                </div>
+                <button 
+                    class="btn" 
+                    style="width:auto;padding:0 16px;"
+                    ${exists ? "disabled" : ""}
+                    aria-label="${exists ? 'Already added' : 'Add contact'}"
+                >
+                    ${exists ? "Added" : "Add"}
+                </button>
+            </div>
+        `;
+
+        if (!exists) {
+            const button = card.querySelector("button");
+            button.addEventListener("click", async (event) => {
+                event.stopPropagation();
+                button.disabled = true;
+                button.textContent = "Adding...";
+                
+                try {
+                    await addUserToContacts(user);
+                } finally {
+                    button.disabled = false;
+                    button.textContent = "Add";
+                }
+            });
+        }
+
         fragment.appendChild(card);
+        hasResults = true;
     });
 
     elements.results.innerHTML = "";
 
-    if (fragment.children.length === 0) {
+    if (!hasResults) {
         elements.results.innerHTML = `
             <div class="card">
                 <div class="subtext" style="text-align:center;padding:20px;">
@@ -206,134 +223,39 @@ function renderSearchResults(users) {
     }
 }
 
-function createSearchResultCard(user) {
-    const exists = myContacts.some(
-        contact => contact.contact_tego_id === user.tego_id
-    );
-
-    const card = document.createElement("div");
-    card.className = "card";
-    card.setAttribute("role", "listitem");
-
-    const displayName = sanitizeText(user.display_name || user.username);
-    const avatarUrl = sanitizeUrl(user.avatar_url) || UI.DEFAULT_AVATAR;
-    const tegoId = sanitizeText(user.tego_id);
-
-    card.innerHTML = `
-        <div class="list-item">
-            <img 
-                class="avatar" 
-                src="${avatarUrl}"
-                alt="${displayName}'s avatar"
-                loading="lazy"
-                onerror="this.src='${UI.DEFAULT_AVATAR}'"
-            >
-            <div class="info">
-                <div class="name">${displayName}</div>
-                <div class="subtext">${tegoId}</div>
-            </div>
-            <button 
-                class="btn" 
-                style="width:auto;padding:0 16px;"
-                ${exists ? "disabled" : ""}
-                aria-label="${exists ? 'Already added' : 'Add contact'}"
-            >
-                ${exists ? "Added" : "Add"}
-            </button>
-        </div>
-    `;
-
-    if (!exists) {
-        const button = card.querySelector("button");
-        button.addEventListener("click", async (event) => {
-            event.stopPropagation();
-            button.disabled = true;
-            button.textContent = "Adding...";
-            
-            try {
-                await addUserToContacts(user);
-            } finally {
-                button.disabled = false;
-                button.textContent = "Add";
-            }
-        });
-    }
-
-    return card;
-}
-
 // ============================================
 // ADD CONTACT
 // ============================================
 async function addUserToContacts(user) {
-    // Validate user object
-    if (!user?.auth_id || !user?.tego_id) {
-        showToast("Invalid user data");
-        return;
-    }
-
-    // Check if already in contacts
-    if (myContacts.some(contact => contact.contact_tego_id === user.tego_id)) {
-        showToast("Already in contacts");
-        return;
-    }
-
+    // Keep original data structure - don't add avatar_url here
     try {
-        // Ensure APP.user exists
-        if (!APP?.user?.id) {
-            showToast("Authentication error");
-            return;
-        }
-
         await addContact({
             owner_id: APP.user.id,
             contact_auth_id: user.auth_id,
             contact_tego_id: user.tego_id,
-            contact_username: user.username || user.tego_id,
-            nickname: user.display_name || user.username || user.tego_id,
-            avatar_url: user.avatar_url || UI.DEFAULT_AVATAR
+            contact_username: user.username,
+            nickname: user.display_name || user.username
         });
 
-        showToast("Contact added successfully");
-        
-        // Reload contacts and refresh search results
+        showToast("Contact added");
         await loadContactsList();
         renderSearchResults(contactResults);
 
     } catch (error) {
         console.error("Add contact error:", error);
-        handleContactError(error);
+        
+        if (error.message && error.message.includes("contacts_unique_contact")) {
+            showToast("Already in contacts");
+            return;
+        }
+
+        if (error.message && error.message.toLowerCase().includes("network")) {
+            showToast("Network error, please try again");
+            return;
+        }
+
+        showToast(error.message || "Unable to add contact");
     }
-}
-
-// ============================================
-// ERROR HANDLING
-// ============================================
-function handleContactError(error) {
-    const errorMessage = error?.message || "";
-    const errorCode = error?.code || "";
-
-    if (errorCode === ERROR_CODES.DUPLICATE_CONTACT || 
-        errorMessage.includes("contacts_unique_contact") ||
-        errorMessage.includes("duplicate")) {
-        showToast("Already in contacts");
-        return;
-    }
-
-    if (errorCode === ERROR_CODES.NETWORK_ERROR || 
-        errorMessage.toLowerCase().includes("network")) {
-        showToast("Network error, please try again");
-        return;
-    }
-
-    if (errorCode === ERROR_CODES.UNAUTHORIZED || 
-        errorMessage.includes("unauthorized")) {
-        showToast("Please log in again");
-        navigateTo(ROUTES.PROFILE);
-        return;
-    }
-
-    showToast(errorMessage || "Unable to add contact");
 }
 
 // ============================================
@@ -353,7 +275,7 @@ async function loadContactsList() {
 
     try {
         myContacts = await getContacts() || [];
-        console.log("Contacts loaded:", myContacts.length);
+        console.log("Contacts:", myContacts);
         renderContacts(myContacts);
     } catch (error) {
         console.error("Contacts error:", error);
@@ -400,7 +322,62 @@ function renderContacts(contacts) {
     }
 
     contacts.forEach(contact => {
-        const card = createContactCard(contact);
+        const card = document.createElement("div");
+        card.className = "card";
+        card.setAttribute("role", "listitem");
+
+        // Keep original avatar structure - use default icon as you had
+        const displayName = contact.nickname || contact.contact_username || contact.contact_tego_id;
+
+        card.innerHTML = `
+            <div class="list-item">
+                <img 
+                    class="avatar" 
+                    src="icon-192.png"
+                    alt="${displayName}'s avatar"
+                    loading="lazy"
+                >
+                <div class="info">
+                    <div class="name">${displayName}</div>
+                    <div class="subtext">${contact.contact_tego_id}</div>
+                </div>
+                <button 
+                    class="danger-btn" 
+                    aria-label="Remove ${displayName} from contacts"
+                >
+                    Remove
+                </button>
+            </div>
+        `;
+
+        const removeButton = card.querySelector(".danger-btn");
+        removeButton.addEventListener("click", async (event) => {
+            event.stopPropagation();
+            
+            // Confirm removal for better UX
+            if (!confirm(`Remove ${displayName} from your contacts?`)) {
+                return;
+            }
+            
+            removeButton.disabled = true;
+            removeButton.textContent = "Removing...";
+            
+            try {
+                await deleteContact(contact.id);
+            } finally {
+                removeButton.disabled = false;
+                removeButton.textContent = "Remove";
+            }
+        });
+
+        card.addEventListener("click", (event) => {
+            if (event.target.closest(".danger-btn")) {
+                return;
+            }
+            saveActiveChat(contact);
+            window.location.href = ROUTES.CHAT;
+        });
+
         fragment.appendChild(card);
     });
 
@@ -408,117 +385,17 @@ function renderContacts(contacts) {
     elements.myContacts.appendChild(fragment);
 }
 
-function createContactCard(contact) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.setAttribute("role", "listitem");
-
-    const displayName = sanitizeText(contact.nickname || contact.contact_username || contact.contact_tego_id);
-    const avatarUrl = sanitizeUrl(contact.avatar_url) || UI.DEFAULT_AVATAR;
-    const tegoId = sanitizeText(contact.contact_tego_id);
-
-    card.innerHTML = `
-        <div class="list-item">
-            <img 
-                class="avatar" 
-                src="${avatarUrl}"
-                alt="${displayName}'s avatar"
-                loading="lazy"
-                onerror="this.src='${UI.DEFAULT_AVATAR}'"
-            >
-            <div class="info">
-                <div class="name">${displayName}</div>
-                <div class="subtext">${tegoId}</div>
-            </div>
-            <button 
-                class="danger-btn" 
-                aria-label="Remove ${displayName} from contacts"
-            >
-                Remove
-            </button>
-        </div>
-    `;
-
-    // Remove button handler
-    const removeButton = card.querySelector(".danger-btn");
-    removeButton.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        
-        // Confirm removal
-        if (!confirm(`Remove ${displayName} from your contacts?`)) {
-            return;
-        }
-        
-        removeButton.disabled = true;
-        removeButton.textContent = "Removing...";
-        
-        try {
-            await deleteContact(contact.id);
-        } finally {
-            removeButton.disabled = false;
-            removeButton.textContent = "Remove";
-        }
-    });
-
-    // Chat navigation
-    card.addEventListener("click", (event) => {
-        // Don't navigate if clicking the remove button
-        if (event.target.closest(".danger-btn")) {
-            return;
-        }
-        
-        saveActiveChat(contact);
-        navigateTo(ROUTES.CHAT);
-    });
-
-    return card;
-}
-
 // ============================================
 // DELETE CONTACT
 // ============================================
 async function deleteContact(id) {
-    if (!id) {
-        showToast("Invalid contact");
-        return;
-    }
-
     try {
         await removeContact(id);
         showToast("Contact removed");
         await loadContactsList();
-        
-        // Update search results if they're visible
-        if (elements.results && elements.results.children.length > 0) {
-            renderSearchResults(contactResults);
-        }
     } catch (error) {
         console.error("Delete contact error:", error);
-        showToast(error.message || "Unable to remove contact");
-    }
-}
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-function sanitizeText(text) {
-    if (!text) return "";
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function sanitizeUrl(url) {
-    if (!url) return null;
-    try {
-        const parsed = new URL(url, window.location.origin);
-        // Only allow http/https protocols
-        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-            return null;
-        }
-        return parsed.href;
-    } catch {
-        return null;
+        showToast("Unable to remove");
     }
 }
 
@@ -537,7 +414,6 @@ function cleanup() {
 // EXPOSE FOR GLOBAL ACCESS
 // ============================================
 window.initContactsPage = initContactsPage;
-window.loadContactsList = loadContactsList;
 
 // Run cleanup when page unloads
 window.addEventListener("beforeunload", cleanup);
