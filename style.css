@@ -1253,4 +1253,76 @@ body {
     min-width: 42px;
   }
 }
+#scroll-bottom-btn{
+position:fixed;
+right:20px;
+bottom:110px;
+width:48px;
+height:48px;
+border:none;
+border-radius:50%;
+background:#2563eb;
+color:#fff;
+font-size:22px;
+display:none;
+align-items:center;
+justify-content:center;
+z-index:999;
+box-shadow:0 4px 12px rgba(0,0,0,.3);
+  }
+.list-item{
+display:flex;
+align-items:center;
+gap:12px;
+width:100%;
+}
 
+.list-item .info{
+flex:1;
+min-width:0;
+}
+
+.list-item button{
+flex-shrink:0;
+  }
+.settings-actions{
+display:flex;
+flex-direction:column;
+gap:12px;
+}
+
+.settings-actions button,
+.settings-actions .btn{
+width:100%;
+margin:0;
+  }
+#media-input{
+display:none;
+  }
+
+*{
+transition:
+background-color .25s ease,
+color .25s ease,
+border-color .25s ease,
+transform .25s ease,
+opacity .25s ease;
+}
+
+.message{
+animation:messageIn .25s ease;
+}
+
+@keyframes messageIn{
+
+from{
+opacity:0;
+transform:translateY(10px);
+}
+
+to{
+opacity:1;
+transform:translateY(0);
+}
+
+  }
