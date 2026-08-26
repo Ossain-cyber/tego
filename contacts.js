@@ -242,66 +242,30 @@ function renderSearchResults(
 
 }
 
-async function addUserToContacts(
-    user
-) {
 
-    try {
+async function addUserToContacts(user) {
+  try {
+    await addContact({
+      owner_id: APP.user.id,
+      contact_auth_id: user.auth_id,
+      contact_tego_id: user.tego_id,
+      contact_username: user.username,
+      nickname: user.display_name || user.username
+    });
 
-        await addContact({
+    showToast("Contact added");
+    await loadContactsList();
+    renderSearchResults(contactResults);
 
-            owner_id: APP.user.id
+  } catch (error) {
+    if (error.message && error.message.includes("contacts_unique_contact")) {
+      showToast("Already in contacts");
+      return;
+    }
 
-            contact_auth_id:
-            user.auth_id,
-
-            contact_tego_id:
-            user.tego_id,
-
-            contact_username:
-            user.username,
-
-            nickname:
-            user.display_name ||
-            user.username
-
-        });
-
-        showToast(
-            "Contact added"
-        );
-
-        await loadContactsList();
-
-        renderSearchResults(
-            contactResults
-        );
-
-    } catch (error) {
-
-if(
-error.message &&
-error.message.includes(
-"contacts_unique_contact"
-)
-){
-
-showToast(
-"Already in contacts"
-);
-
-return;
-
+    showToast(error.message || "Unable to add contact");
+  }
 }
-
-showToast(
-error.message ||
-"Unable to add contact"
-);
-
-}
-}
-
 async function loadContactsList() {
 
     try {
