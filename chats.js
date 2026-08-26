@@ -255,15 +255,47 @@ function renderChats(
 
     <img
     class="avatar"
-    src="${
-        chat.avatar_url ||
-        generateAvatar(
-            chat.nickname ||
-            chat.contact_username ||
-            "T"
-        )
-    }"
+    src="icon-192.png"
     >
+
+    <div class="chat-content">
+
+        <div class="chat-top">
+
+            <div class="chat-name">
+                ${
+                    chat.nickname ||
+                    chat.contact_username
+                }
+            </div>
+
+            <div class="chat-time">
+                ${lastTime}
+            </div>
+
+        </div>
+
+        <div class="chat-bottom">
+
+            <div class="chat-preview">
+                ${lastText}
+            </div>
+
+            ${
+                chat.unreadCount > 0
+                ? `
+                <div class="badge">
+                    ${chat.unreadCount}
+                </div>
+                `
+                : ""
+            }
+
+        </div>
+
+    </div>
+
+</div>
 
     <div class="chat-main">
 
