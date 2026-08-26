@@ -287,7 +287,7 @@ function renderChats(
                 <div class="badge">
                     ${chat.unreadCount}
                 </div>
-                `
+                `;
                 : ""
             }
 
