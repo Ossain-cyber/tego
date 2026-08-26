@@ -133,8 +133,8 @@ async function loadConversation() {
             .from("messages")
             .select("*")
             .or(
-                `and(sender_id.eq.${APP.user.id},receiver_id.eq.${activeChat.contact_auth_id}),and(sender_id.eq.${activeChat.contact_auth_id},receiver_id.eq.${APP.user.id})`
-            )
+`and(sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${activeChat.contact_tego_id}),and(sender_tego_id.eq.${activeChat.contact_tego_id},receiver_tego_id.eq.${currentProfile.tego_id})`
+)
             .order("created_at", { ascending: true });
 
         if (error) {
@@ -176,7 +176,7 @@ function renderMessages(messages) {
             body = `
                 <i>Message deleted</i>
             `;
-        } else if (message.mime_type === "audio/webm") {
+        } else if(message.message_type === "audio") {
             body = `
                 <audio controls src="${message.media_url}">
                 </audio>
@@ -204,6 +204,12 @@ function renderMessages(messages) {
             <div class="message-body">
                 ${body}
             </div>
+            <button
+class="reply-btn"
+data-id="${message.id}"
+>
+Reply
+</button>
             <div class="message-footer">
                 <div class="message-time">
                     ${formatTime(message.created_at)}
@@ -214,9 +220,7 @@ function renderMessages(messages) {
                     </div>
                 ` : ""}
             </div>
-            <button class="reply-btn" data-id="${message.id}">
-                Reply
-            </button>
+            
             ${mine ? `
                 <button class="delete-message-btn" data-id="${message.id}">
                     Delete
@@ -376,6 +380,7 @@ async function toggleRecording() {
                 file_name: file.name,
                 mime_type: "audio/webm"
             });
+            await loadConversation();
         };
         
         mediaRecorder.start();
