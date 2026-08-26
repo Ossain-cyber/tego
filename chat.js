@@ -146,6 +146,11 @@ async function loadConversation() {
     } catch {
         showToast("Unable to load messages");
     }
+    showToast(
+currentProfile.tego_id +
+" -> " +
+activeChat.contact_tego_id
+);
 }
 
 function renderMessages(messages) {
