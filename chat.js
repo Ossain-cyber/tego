@@ -167,7 +167,7 @@ function renderMessages(messages) {
     
     messages.forEach(message => {
         // Use tego_id to determine if message is mine
-        const mine = message.sender_tego_id === currentProfile.tego_id;
+        const mine = message.sender_id === APP.user.id;
         const item = document.createElement("div");
         item.className = mine ? "message me" : "message other";
         
