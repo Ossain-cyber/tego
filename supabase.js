@@ -152,6 +152,7 @@ const { data, error } = await APP.supabase
     .single();  
 
 if (error) throw error;  
+    console.log("Contact inserted:", data);
 
 return data;
 
@@ -196,7 +197,8 @@ async function getContacts() {
         throw error;
 
     }
-
+console.log("Current user:", APP.user.id);
+    console.log("Contacts fetched:", data);
     return data || [];
 
 }
@@ -329,20 +331,19 @@ return APP.supabase
 }
 
 function subscribeContacts(callback) {
-
-return APP.supabase  
-    .channel("contacts-channel")  
-    .on(  
-        "postgres_changes",  
-        {  
-            event: "*",  
-            schema: "public",  
-            table: "contacts"  
-        },  
-        callback  
-    )  
-    .subscribe();
-
+    return APP.supabase
+        .channel(`contacts-${APP.user.id}`)
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: "contacts",
+                filter: `owner_id=eq.${APP.user.id}`
+            },
+            callback
+        )
+        .subscribe();
 }
 
 function subscribeProfiles(callback) {
