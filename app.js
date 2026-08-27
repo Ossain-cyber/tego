@@ -7,7 +7,7 @@ const APP = {
     installPrompt: null,
     initialized: false,
     initError: null,
-    isRedirecting: false // Add this to prevent redirect loops
+    isRedirecting: false
 };
 
 // Wait for DOM and initialize
@@ -57,11 +57,13 @@ async function initializeApp() {
 // Initialize Supabase client
 async function initializeSupabase() {
     try {
+        // Check if createSupabase function exists
         if (typeof createSupabase !== "function") {
             console.warn("createSupabase function not found");
             return;
         }
 
+        // Create Supabase client
         const supabase = createSupabase();
         if (!supabase) {
             throw new Error("Failed to create Supabase client");
@@ -69,6 +71,7 @@ async function initializeSupabase() {
 
         APP.supabase = supabase;
 
+        // Get session
         try {
             const { data, error } = await APP.supabase.auth.getSession();
             if (error) {
@@ -81,6 +84,7 @@ async function initializeSupabase() {
             APP.session = data?.session || null;
             APP.user = data?.session?.user || null;
 
+            // Update user if session exists
             if (APP.user) {
                 console.log("User authenticated:", APP.user.email);
             } else {
@@ -102,69 +106,26 @@ async function initializeSupabase() {
     }
 }
 
-// Route protection - FIXED
+// Route protection - SIMPLIFIED FIXED VERSION
 async function protectRoutes() {
-    // Prevent redirect loops
-    if (APP.isRedirecting) {
-        console.log("Already redirecting, skipping...");
+    const page = getCurrentPage();
+    const publicPages = ["index.html", "login.html", "register.html", ""];
+    const isPublic = publicPages.includes(page);
+
+    // If on private page but not logged in, redirect to login
+    if (!isPublic && !APP.user) {
+        console.log("Redirecting unauthenticated user to login");
+        window.location.replace("login.html");
         return;
     }
 
-    try {
-        const page = getCurrentPage();
-        const publicPages = ["index.html", "login.html", "register.html", ""];
-        const isPublic = publicPages.includes(page);
-
-        // Get fresh session status
-        let isLoggedIn = !!APP.user;
-        
-        // If we think we're logged in, verify with Supabase
-        if (isLoggedIn && APP.supabase) {
-            try {
-                const { data, error } = await APP.supabase.auth.getUser();
-                if (error || !data?.user) {
-                    console.log("Session invalid, clearing user...");
-                    APP.user = null;
-                    APP.session = null;
-                    isLoggedIn = false;
-                }
-            } catch (error) {
-                console.warn("Session verification failed:", error);
-                // Don't logout on verification error - keep user if we have them
-            }
-        }
-
-        // If on public page but logged in
-        if (isPublic && isLoggedIn) {
-            if (page === "login.html" || page === "register.html" || page === "" || page === "index.html") {
-                console.log("Redirecting logged-in user from public page to chats");
-                APP.isRedirecting = true;
-                window.location.replace("chats.html");
-                return;
-            }
+    // If on public page but logged in, redirect to chats
+    if (isPublic && APP.user) {
+        if (page === "login.html" || page === "register.html") {
+            console.log("Redirecting logged-in user to chats");
+            window.location.replace("chats.html");
             return;
         }
-
-        // If on private page but not logged in
-        if (!isPublic && !isLoggedIn) {
-            // Skip redirect for these pages - they handle auth themselves
-            const authPages = ["login.html", "register.html", "index.html"];
-            if (authPages.includes(page)) {
-                return;
-            }
-            
-            console.log("Redirecting unauthenticated user to login");
-            APP.isRedirecting = true;
-            window.location.replace("login.html");
-            return;
-        }
-
-        // Reset redirect flag if we get here
-        APP.isRedirecting = false;
-
-    } catch (error) {
-        console.error("Route protection failed:", error);
-        APP.isRedirecting = false;
     }
 }
 
@@ -180,7 +141,7 @@ function getCurrentPage() {
     }
 }
 
-// Logout function - FIXED to prevent redirect loops
+// Logout function
 async function logout() {
     try {
         // Prevent multiple logout attempts
@@ -202,6 +163,7 @@ async function logout() {
                 await APP.supabase.auth.signOut();
             } catch (error) {
                 console.error("Supabase signout failed:", error);
+                // Continue with local cleanup even if remote signout fails
             }
         }
 
@@ -255,6 +217,7 @@ function setupLogoutButtons() {
         if (buttons.length === 0) return;
 
         buttons.forEach(btn => {
+            // Remove existing listener to avoid duplicates
             btn.removeEventListener("click", logout);
             btn.addEventListener("click", async (e) => {
                 e.preventDefault();
@@ -277,6 +240,7 @@ function showToast(message = "", duration = 3000) {
             toast = document.createElement("div");
             toast.id = "tego-toast";
             
+            // Apply styles
             Object.assign(toast.style, {
                 position: "fixed",
                 bottom: "100px",
@@ -304,10 +268,12 @@ function showToast(message = "", duration = 3000) {
         toast.style.display = "block";
         toast.style.opacity = "1";
 
+        // Clear existing timer
         if (toast.timer) {
             clearTimeout(toast.timer);
         }
 
+        // Hide after duration
         toast.timer = setTimeout(() => {
             toast.style.opacity = "0";
             setTimeout(() => {
@@ -317,6 +283,7 @@ function showToast(message = "", duration = 3000) {
 
     } catch (error) {
         console.warn("Toast display failed:", error);
+        // Fallback to alert if toast fails
         if (message) alert(message);
     }
 }
@@ -328,6 +295,7 @@ function formatTime(dateString) {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return "";
+        
         return date.toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit"
@@ -345,6 +313,7 @@ function formatDate(dateString) {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return "";
+        
         return date.toLocaleDateString();
     } catch (error) {
         console.warn("Date formatting failed:", error);
@@ -354,7 +323,10 @@ function formatDate(dateString) {
 
 // Generate avatar URL
 function generateAvatar(name = "") {
-    if (!name) name = "User";
+    if (!name) {
+        name = "User";
+    }
+    
     try {
         return `https://ui-avatars.com/api/?background=2563eb&color=fff&name=${encodeURIComponent(name)}`;
     } catch (error) {
@@ -374,6 +346,7 @@ function setupInstallPrompt() {
             if (installBtn) {
                 installBtn.classList.remove("hidden");
                 
+                // Remove existing listeners to avoid duplicates
                 const newBtn = installBtn.cloneNode(true);
                 installBtn.parentNode.replaceChild(newBtn, installBtn);
                 
@@ -386,9 +359,11 @@ function setupInstallPrompt() {
                     try {
                         const result = await APP.installPrompt.prompt();
                         console.log("Install prompt result:", result);
+                        
                         if (result && result.outcome === "accepted") {
                             showToast("App installed successfully!");
                         }
+                        
                         APP.installPrompt = null;
                     } catch (error) {
                         console.error("Install prompt failed:", error);
@@ -399,6 +374,7 @@ function setupInstallPrompt() {
             }
         });
 
+        // Handle successful installation
         window.addEventListener("appinstalled", () => {
             console.log("App installed");
             showToast("Thank you for installing!");
@@ -418,6 +394,7 @@ async function registerServiceWorker() {
             return;
         }
 
+        // Check if sw.js exists before registering
         try {
             const response = await fetch("sw.js", { method: "HEAD" });
             if (!response.ok) {
@@ -432,6 +409,7 @@ async function registerServiceWorker() {
         const registration = await navigator.serviceWorker.register("sw.js");
         console.log("Service worker registered:", registration.scope);
 
+        // Check for updates
         registration.addEventListener("updatefound", () => {
             console.log("Service worker update found");
         });
@@ -462,6 +440,7 @@ async function getProfile() {
 
         if (error) {
             if (error.code === "PGRST116") {
+                // No profile found - that's ok
                 console.log("No profile found for user");
                 APP.profile = null;
                 return null;
@@ -516,6 +495,7 @@ function getActiveChat() {
     try {
         const data = localStorage.getItem("activeChat");
         if (!data) return null;
+
         return JSON.parse(data);
     } catch (error) {
         console.warn("Failed to parse active chat:", error);
