@@ -504,27 +504,179 @@ function saveActiveChat(contact) {
     }
 }
 
-// Check if user is authenticated
-function isAuthenticated() {
-    return !!(APP.user && APP.session);
+async function login(email, password) {
+    try {
+        const result = await signIn(email, password);
+
+        return {
+            success: true,
+            data: result
+        };
+
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message
+        };
+    }
 }
 
-// Export for global access
-window.APP = APP;
-window.logout = logout;
-window.showToast = showToast;
-window.formatTime = formatTime;
-window.formatDate = formatDate;
-window.generateAvatar = generateAvatar;
-window.getProfile = getProfile;
-window.openChat = openChat;
-window.openProfile = openProfile;
-window.openContacts = openContacts;
-window.openChats = openChats;
-window.openSettings = openSettings;
-window.getActiveChat = getActiveChat;
-window.saveActiveChat = saveActiveChat;
-window.isAuthenticated = isAuthenticated;
-window.initializeApp = initializeApp;
+async function register(email, password) {
+    try {
+        const result = await signUp(email, password);
 
-console.log("App module loaded");
+        return {
+            success: true,
+            data: result
+        };
+
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message
+        };
+    }
+}
+
+async function logoutUser() {
+
+    try {
+
+        await signOutUser();
+
+        localStorage.removeItem("activeChat");
+        localStorage.removeItem("tego_logged_in");
+
+        sessionStorage.clear();
+
+        window.location.replace("login.html");
+
+    } catch (error) {
+
+        alert(
+            error && error.message
+                ? error.message
+                : "Logout failed"
+        );
+
+    }
+}
+
+async function requireAuth() {
+
+    try {
+
+        const session = await getCurrentSession();
+
+        if (!session || !session.user) {
+
+            window.location.replace("login.html");
+
+            return false;
+        }
+
+        window.APP.user = session.user;
+        window.APP.session = session;
+
+        return true;
+
+    } catch (error) {
+
+        window.location.replace("login.html");
+
+        return false;
+    }
+}
+
+async function requireGuest() {
+
+    try {
+
+        const session = await getCurrentSession();
+
+        if (session && session.user) {
+
+            window.location.replace("chats.html");
+
+            return false;
+        }
+
+        return true;
+
+    } catch (error) {
+
+        return true;
+    }
+}
+
+async function getLoggedInUser() {
+
+    try {
+        return await getCurrentUser();
+    } catch (error) {
+        return null;
+    }
+}
+
+async function getLoggedInProfile() {
+
+    try {
+        return await getMyProfile();
+    } catch (error) {
+        return null;
+    }
+}
+
+async function ensureProfile() {
+
+    const profile = await getLoggedInProfile();
+
+    if (!profile) {
+
+        window.location.replace("profile.html");
+
+        return false;
+    }
+
+    return true;
+}
+
+function saveActiveChat(chat) {
+
+    localStorage.setItem(
+        "activeChat",
+        JSON.stringify(chat)
+    );
+}
+
+function getActiveChat() {
+
+    const chat = localStorage.getItem("activeChat");
+
+    if (!chat) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(chat);
+    } catch (error) {
+        return null;
+    }
+}
+
+function clearActiveChat() {
+
+    localStorage.removeItem("activeChat");
+}
+
+window.login = login;
+window.register = register;
+window.logoutUser = logoutUser;
+window.requireAuth = requireAuth;
+window.requireGuest = requireGuest;
+window.getLoggedInUser = getLoggedInUser;
+window.getLoggedInProfile = getLoggedInProfile;
+window.ensureProfile = ensureProfile;
+window.saveActiveChat = saveActiveChat;
+window.getActiveChat = getActiveChat;
+window.clearActiveChat = clearActiveChat;
