@@ -7,6 +7,8 @@ let searchTimeout = null;
 let myProfile = null;
 let abortController = null;
 let isInitialized = false;
+let refreshInterval = null;
+let isRefreshing = false;
 
 // ============================================
 // DOM CACHE
@@ -40,8 +42,8 @@ async function initContactsPage() {
 
         bindContactsEvents();
         
-        // Force load contacts with fresh data
-        await loadContactsList(true);
+        // Load contacts
+        await loadContactsList();
         isInitialized = true;
 
         // Subscribe to contacts changes
@@ -49,8 +51,7 @@ async function initContactsPage() {
             console.log("Setting up contacts subscription...");
             subscribeContacts(async () => {
                 console.log("Contacts subscription triggered!");
-                // Force refresh when subscription fires
-                await loadContactsList(true);
+                await loadContactsList();
                 notifyChatsPage();
             });
         }
@@ -60,13 +61,6 @@ async function initContactsPage() {
 
         // Listen for storage changes
         window.addEventListener('storage', handleStorageChange);
-
-        // Set up a refresh interval (every 10 seconds)
-        setInterval(() => {
-            if (!document.hidden) {
-                loadContactsList(true);
-            }
-        }, 10000);
 
         console.log("Contacts page initialized");
 
@@ -80,19 +74,19 @@ async function initContactsPage() {
 // VISIBILITY & STORAGE HANDLERS
 // ============================================
 function handleVisibilityChange() {
-    if (!document.hidden && isInitialized) {
+    if (!document.hidden && isInitialized && !isRefreshing) {
         console.log("Tab became visible, refreshing contacts...");
-        loadContactsList(true);
+        loadContactsList();
     }
 }
 
 function handleStorageChange(event) {
-    if (event.key === 'contact_added' || 
+    if ((event.key === 'contact_added' || 
         event.key === 'contact_removed' ||
-        event.key === 'contacts_last_updated' ||
-        event.key === 'force_contacts_refresh') {
+        event.key === 'contacts_last_updated') && 
+        !isRefreshing) {
         console.log("Contact change detected in another tab, refreshing...");
-        loadContactsList(true);
+        loadContactsList();
     }
 }
 
@@ -103,7 +97,6 @@ function notifyChatsPage() {
     try {
         const timestamp = Date.now().toString();
         localStorage.setItem('contacts_last_updated', timestamp);
-        localStorage.setItem('force_contacts_refresh', timestamp);
         sessionStorage.setItem('contact_added', timestamp);
         console.log("Notified chats page of contact changes");
     } catch (error) {
@@ -311,7 +304,7 @@ async function addUserToContacts(user) {
         showToast("Contact added successfully");
         
         // Force immediate refresh
-        await loadContactsList(true);
+        await loadContactsList();
         
         // Notify chats page
         notifyChatsPage();
@@ -326,8 +319,7 @@ async function addUserToContacts(user) {
         
         if (error.message && error.message.includes("contacts_unique_contact")) {
             showToast("Already in contacts");
-            // Refresh to update the UI
-            await loadContactsList(true);
+            await loadContactsList();
             return;
         }
 
@@ -347,44 +339,37 @@ async function addUserToContacts(user) {
 }
 
 // ============================================
-// LOAD CONTACTS - FORCED REFRESH VERSION
+// LOAD CONTACTS
 // ============================================
-async function loadContactsList(forceRefresh = false) {
-    // Show loading state
-    if (elements.myContacts) {
-        elements.myContacts.innerHTML = `
-            <div class="card">
-                <div class="subtext" style="text-align:center;padding:20px;">
-                    ${forceRefresh ? 'Refreshing contacts...' : 'Loading contacts...'}
-                </div>
-            </div>
-        `;
+async function loadContactsList() {
+    // Prevent multiple simultaneous refreshes
+    if (isRefreshing) {
+        console.log("Already refreshing, skipping...");
+        return;
     }
 
+    isRefreshing = true;
+
     try {
-        console.log(`${forceRefresh ? 'Force refreshing' : 'Loading'} contacts...`);
-        
-        // Clear cache if force refresh
-        if (forceRefresh) {
-            // Clear any cached contact data
-            try {
-                sessionStorage.removeItem('cached_contacts');
-                localStorage.removeItem('cached_contacts');
-            } catch (e) {
-                // Ignore
+        // Show loading state only if we have no contacts yet
+        if (!myContacts || myContacts.length === 0) {
+            if (elements.myContacts) {
+                elements.myContacts.innerHTML = `
+                    <div class="card">
+                        <div class="subtext" style="text-align:center;padding:20px;">
+                            Loading contacts...
+                        </div>
+                    </div>
+                `;
             }
         }
+
+        console.log("Loading contacts...");
         
         // Fetch fresh contacts
-        myContacts = await getContacts() || [];
+        const contacts = await getContacts();
+        myContacts = contacts || [];
         console.log("Contacts loaded:", myContacts.length);
-        
-        // Cache the contacts
-        try {
-            sessionStorage.setItem('cached_contacts', JSON.stringify(myContacts));
-        } catch (e) {
-            // Ignore
-        }
         
         renderContacts(myContacts);
         return myContacts;
@@ -392,27 +377,13 @@ async function loadContactsList(forceRefresh = false) {
     } catch (error) {
         console.error("Contacts error:", error);
         
-        // Try to load from cache if available
-        try {
-            const cached = sessionStorage.getItem('cached_contacts');
-            if (cached) {
-                myContacts = JSON.parse(cached);
-                console.log("Loaded contacts from cache:", myContacts.length);
-                renderContacts(myContacts);
-                showToast("Showing cached contacts (refresh failed)");
-                return myContacts;
-            }
-        } catch (e) {
-            // Ignore
-        }
-        
         if (elements.myContacts) {
             elements.myContacts.innerHTML = `
                 <div class="card" style="border-color:#e74c3c;">
                     <div class="subtext" style="text-align:center;padding:20px;color:#e74c3c;">
                         Failed to load contacts
                         <br>
-                        <button class="btn" style="margin-top:10px;" onclick="loadContactsList(true)">
+                        <button class="btn" style="margin-top:10px;" onclick="loadContactsList()">
                             Retry
                         </button>
                     </div>
@@ -422,6 +393,8 @@ async function loadContactsList(forceRefresh = false) {
         
         showToast("Unable to load contacts");
         return [];
+    } finally {
+        isRefreshing = false;
     }
 }
 
@@ -537,14 +510,13 @@ async function deleteContact(id) {
         await removeContact(id);
         showToast("Contact removed");
         
-        // Force refresh
-        await loadContactsList(true);
+        // Refresh
+        await loadContactsList();
         
         // Notify chats page
         try {
             localStorage.setItem('contact_removed', Date.now().toString());
             localStorage.setItem('contacts_last_updated', Date.now().toString());
-            localStorage.setItem('force_contacts_refresh', Date.now().toString());
         } catch (e) {
             // Ignore
         }
@@ -566,7 +538,7 @@ async function deleteContact(id) {
 // ============================================
 function refreshContacts() {
     console.log("Manual refresh triggered");
-    loadContactsList(true);
+    loadContactsList();
 }
 
 // ============================================
@@ -578,6 +550,10 @@ function cleanup() {
         abortController = null;
     }
     clearTimeout(searchTimeout);
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     window.removeEventListener('storage', handleStorageChange);
 }
