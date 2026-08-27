@@ -125,6 +125,49 @@ async function loadExistingProfile() {
             profile.avatar_url;
 
         }
+        const copyBtn =
+document.getElementById(
+    "copy-tego-id"
+);
+
+if(copyBtn){
+
+    copyBtn.addEventListener(
+        "click",
+        async () => {
+
+            const tegoId =
+            document
+            .getElementById(
+                "tego-id"
+            )
+            .textContent
+            .trim();
+
+            try{
+
+                await navigator
+                .clipboard
+                .writeText(
+                    tegoId
+                );
+
+                showToast(
+                    "Tego ID copied"
+                );
+
+            }catch{
+
+                showToast(
+                    "Copy failed"
+                );
+
+            }
+
+        }
+    );
+
+                }
 
         return;
 
