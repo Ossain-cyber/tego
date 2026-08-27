@@ -66,17 +66,23 @@ function getCurrentPage() {
 }
 
 async function logout() {
+async function logout() {
+
     try {
-        await APP.supabase.auth.signOut();
 
-        localStorage.clear();
-        sessionStorage.clear();
+        if (APP.supabase) {
+            await APP.supabase.auth.signOut();
+        }
 
-        window.location.href = "login.html";
-    } catch (err) {
-        console.error(err);
-        showToast("Logout failed");
+    } catch (error) {
+        console.error(error);
     }
+
+    localStorage.removeItem("activeChat");
+    sessionStorage.clear();
+
+    window.location.href = "login.html";
+
 }
 
 function setupLogoutButtons() {
