@@ -498,11 +498,3 @@ window.generateUniqueTegoId = generateUniqueTegoId;
 window.copyTegoId = copyTegoId;
 window.showToast = showToast;
 
-// Auto-initialize if page is loaded
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initProfilePage);
-} else {
-    initProfilePage();
-}
-
-console.log("Profile page module loaded");
