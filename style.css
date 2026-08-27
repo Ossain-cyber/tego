@@ -1272,3 +1272,14 @@ input[type="file"] {
 .nav-btn:active{
     transform: scale(.96);
   }
+#tego-id{
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #1d4ed8
+    );
+    color:#fff;
+    font-size:18px;
+    letter-spacing:1px;
+    border:none;
+}
