@@ -1,5 +1,5 @@
 // ============================================
-// LOAD CHATS - FIXED VERSION
+// LOAD CHATS
 // ============================================
 async function loadChats() {
     // Store current search query if any
@@ -33,20 +33,24 @@ async function loadChats() {
         // Process each contact
         for (const contact of contacts) {
             try {
-                // Get last message - FIXED: No continue on error
+                // Get last message
                 let lastMessage = null;
-                
+
                 try {
-                    const { data } = await APP.supabase
+                    const { data } =
+                    await APP.supabase
                         .from("messages")
                         .select("*")
                         .or(
                             `and(sender_tego_id.eq.${currentProfile.tego_id},receiver_tego_id.eq.${contact.contact_tego_id}),and(sender_tego_id.eq.${contact.contact_tego_id},receiver_tego_id.eq.${currentProfile.tego_id})`
                         )
-                        .order("created_at", { ascending: false })
+                        .order("created_at", {
+                            ascending: false
+                        })
                         .limit(1);
-                    
+
                     lastMessage = data?.[0] || null;
+
                 } catch (e) {
                     console.log(
                         "No messages yet for",
@@ -55,39 +59,27 @@ async function loadChats() {
                     lastMessage = null;
                 }
 
-                // Get unread count - with proper error handling
-                let unreadCount = 0;
-                try {
-                    const { count, error: countError } = 
-                        await APP.supabase
-                            .from("messages")
-                            .select("*", { count: "exact", head: true })
-                            .eq("sender_tego_id", contact.contact_tego_id)
-                            .eq("receiver_tego_id", currentProfile.tego_id)
-                            .neq("status", "read");
+                // Get unread count
+                const { count, error: countError } = 
+                    await APP.supabase
+                        .from("messages")
+                        .select("*", { count: "exact", head: true })
+                        .eq("sender_tego_id", contact.contact_tego_id)
+                        .eq("receiver_tego_id", currentProfile.tego_id)
+                        .neq("status", "read");
 
-                    if (!countError) {
-                        unreadCount = count || 0;
-                    }
-                } catch (e) {
-                    console.log("Error counting unread for", contact.contact_tego_id);
-                    unreadCount = 0;
+                if (countError) {
+                    console.error("Error counting unread:", countError);
                 }
 
                 conversations.push({
                     ...contact,
                     lastMessage,
-                    unreadCount: unreadCount
+                    unreadCount: count || 0
                 });
 
             } catch (error) {
                 console.error("Error processing contact:", error);
-                // Don't skip the contact - add it with default values
-                conversations.push({
-                    ...contact,
-                    lastMessage: null,
-                    unreadCount: 0
-                });
                 continue;
             }
         }
@@ -138,11 +130,11 @@ async function loadChats() {
 }
 
 // ============================================
-// GET LAST MESSAGE TEXT - FIXED
+// GET LAST MESSAGE TEXT
 // ============================================
 function getLastMessageText(message) {
     if (!message) {
-        return "Start chatting";  // Changed from "No messages yet"
+        return "Start chatting";
     }
 
     if (message.deleted_at) {
