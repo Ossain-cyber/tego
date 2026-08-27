@@ -11,147 +11,142 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="app.js"></script>
 </head>
+
 <body>
 
 <div class="auth-page">
 
-<div class="auth-card">
+    <div class="auth-card">
 
-<div class="logo-box">
-<img src="icon-192.png" alt="Tego">
-</div>
+        <div class="logo-box">
+            <img src="icon-192.png" alt="Tego">
+        </div>
 
-<h1 class="app-title">Tego</h1>
+        <h1 class="app-title">Tego</h1>
 
-<p class="app-subtitle">
-Welcome back
-</p>
+        <p class="app-subtitle">
+            Welcome back
+        </p>
 
-<form id="login-form">
+        <form id="login-form">
 
-<div class="input-group">
-<input
-class="input"
-type="email"
-id="email"
-placeholder="Email"
-required
->
-</div>
+            <div class="input-group">
+                <input
+                    class="input"
+                    type="email"
+                    id="email"
+                    placeholder="Email"
+                    autocomplete="email"
+                    required
+                >
+            </div>
 
-<div class="input-group">
-<input
-class="input"
-type="password"
-id="password"
-placeholder="Password"
-required
->
-</div>
+            <div class="input-group">
+                <input
+                    class="input"
+                    type="password"
+                    id="password"
+                    placeholder="Password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
 
-<button
-type="submit"
-class="btn"
-id="login-btn"
->
-Login
-</button>
+            <button
+                type="submit"
+                class="btn"
+                id="login-btn"
+            >
+                Login
+            </button>
 
-</form>
+        </form>
 
-<a
-href="register.html"
-class="link"
->
-Create Account
-</a>
+        <a href="register.html" class="link">
+            Create Account
+        </a>
 
-</div>
+    </div>
 
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", async () => {
 
-document.addEventListener(
-"DOMContentLoaded",
-() => {
+    const form = document.getElementById("login-form");
+    const button = document.getElementById("login-btn");
 
-const form =
-document.getElementById(
-"login-form"
-);
+    if (!form || !button) return;
 
-const button =
-document.getElementById(
-"login-btn"
-);
+    form.addEventListener("submit", async (e) => {
 
-form.addEventListener(
-"submit",
-async e => {
+        e.preventDefault();
 
-e.preventDefault();
+        if (button.disabled) return;
 
-const email =
-document
-.getElementById("email")
-.value
-.trim();
+        const email = document
+            .getElementById("email")
+            .value
+            .trim();
 
-const password =
-document
-.getElementById("password")
-.value;
+        const password = document
+            .getElementById("password")
+            .value;
 
-if(!email || !password){
+        if (!email || !password) {
+            alert("Please fill in all fields.");
+            return;
+        }
 
-showToast(
-"Fill all fields"
-);
+        button.disabled = true;
+        button.textContent = "Signing In...";
 
-return;
-}
+        try {
 
-try{
+            if (!window.APP || !window.APP.supabase) {
+                throw new Error("Tego could not connect to Supabase. Please refresh the page.");
+            }
 
-button.disabled = true;
+            const { data, error } =
+                await window.APP.supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
 
-button.textContent =
-"Signing In...";
+            if (error) {
+                throw error;
+            }
 
-await signIn(
-email,
-password
-);
+            if (!data || !data.session || !data.user) {
+                throw new Error("Login succeeded but no session was created.");
+            }
 
-showToast(
-"Login successful"
-);
+            window.APP.user = data.user;
+            window.APP.session = data.session;
 
-setTimeout(() => {
+            localStorage.setItem(
+                "tego_logged_in",
+                "true"
+            );
 
-window.location.href =
-"chats.html";
+            window.location.replace("chats.html");
 
-},500);
+        } catch (error) {
 
-}catch(error){
+            console.error(error);
 
-showToast(
-error.message ||
-"Login failed"
-);
+            alert(
+                error && error.message
+                    ? error.message
+                    : "Login failed. Please try again."
+            );
 
-button.disabled = false;
+            button.disabled = false;
+            button.textContent = "Login";
+        }
 
-button.textContent =
-"Login";
-
-}
-
-});
+    });
 
 });
 </script>
