@@ -1,219 +1,498 @@
+// App state - initialized with defaults
 const APP = {
     supabase: null,
     session: null,
     user: null,
     profile: null,
-    installPrompt: null
+    installPrompt: null,
+    initialized: false,
+    initError: null
 };
 
+// Wait for DOM and initialize
 document.addEventListener("DOMContentLoaded", async () => {
-    await initializeApp();
+    try {
+        await initializeApp();
+    } catch (error) {
+        console.error("App initialization failed:", error);
+        // Show user-friendly error
+        showToast("App failed to initialize. Please refresh.");
+    }
 });
 
+// Main initialization function
 async function initializeApp() {
-    registerServiceWorker();
-    setupInstallPrompt();
-
-    if (typeof createSupabase === "function") {
-        APP.supabase = createSupabase();
-
-        try {
-            const {
-                data: { session }
-            } = await APP.supabase.auth.getSession();
-
-            APP.session = session;
-            APP.user = session?.user || null;
-
-        } catch (e) {
-            console.error(e);
-        }
-    }
-
-    protectRoutes();
-    setupLogoutButtons();
-}
-
-function protectRoutes() {
-    const page = getCurrentPage();
-
-    const publicPages = [
-        "index.html",
-        "login.html",
-        "register.html"
-    ];
-
-    const requiresAuth = !publicPages.includes(page);
-
-    if (requiresAuth && !APP.user) {
-        window.location.replace("login.html");
+    // Prevent double initialization
+    if (APP.initialized) {
+        console.log("App already initialized");
         return;
     }
 
-    if (!requiresAuth && APP.user) {
-        if (
-            page === "login.html" ||
-            page === "register.html"
-        ) {
-            window.location.replace("chats.html");
-        }
+    console.log("Initializing app...");
+
+    // Register service worker
+    await registerServiceWorker();
+
+    // Setup install prompt
+    setupInstallPrompt();
+
+    // Initialize Supabase if available
+    await initializeSupabase();
+
+    // Protect routes based on auth state
+    await protectRoutes();
+
+    // Setup UI elements
+    setupLogoutButtons();
+
+    // Initialize profile if user is logged in
+    if (APP.user) {
+        await getProfile();
     }
+
+    APP.initialized = true;
+    console.log("App initialized successfully");
 }
 
-function getCurrentPage() {
-    const path = window.location.pathname;
-    return path.split("/").pop() || "index.html";
-}
-
-async function logout() {
-async function logout() {
-
+// Initialize Supabase client
+async function initializeSupabase() {
     try {
+        // Check if createSupabase function exists
+        if (typeof createSupabase !== "function") {
+            console.warn("createSupabase function not found");
+            return;
+        }
 
-        if (APP.supabase) {
-            await APP.supabase.auth.signOut();
+        // Create Supabase client
+        const supabase = createSupabase();
+        if (!supabase) {
+            throw new Error("Failed to create Supabase client");
+        }
+
+        APP.supabase = supabase;
+
+        // Get session
+        try {
+            const { data, error } = await APP.supabase.auth.getSession();
+            if (error) {
+                console.warn("Failed to get session:", error);
+                APP.session = null;
+                APP.user = null;
+                return;
+            }
+
+            APP.session = data?.session || null;
+            APP.user = data?.session?.user || null;
+
+            // Update user if session exists
+            if (APP.user) {
+                console.log("User authenticated:", APP.user.email);
+            } else {
+                console.log("No active session");
+            }
+
+        } catch (error) {
+            console.error("Session retrieval failed:", error);
+            APP.session = null;
+            APP.user = null;
         }
 
     } catch (error) {
-        console.error(error);
+        console.error("Supabase initialization failed:", error);
+        APP.supabase = null;
+        APP.session = null;
+        APP.user = null;
+        throw error;
     }
-
-    localStorage.removeItem("activeChat");
-    sessionStorage.clear();
-
-    window.location.href = "login.html";
-
 }
 
-function setupLogoutButtons() {
-    document.querySelectorAll("[data-logout]").forEach(btn => {
-        btn.addEventListener("click", logout);
-    });
-}
+// Route protection
+async function protectRoutes() {
+    try {
+        const page = getCurrentPage();
+        const publicPages = ["index.html", "login.html", "register.html", ""];
+        const isPublic = publicPages.includes(page);
 
-function showToast(message = "") {
-
-    let toast = document.getElementById("tego-toast");
-
-    if (!toast) {
-        toast = document.createElement("div");
-
-        toast.id = "tego-toast";
-
-        toast.style.position = "fixed";
-        toast.style.bottom = "100px";
-        toast.style.left = "50%";
-        toast.style.transform = "translateX(-50%)";
-        toast.style.background = "#2563eb";
-        toast.style.color = "#fff";
-        toast.style.padding = "12px 18px";
-        toast.style.borderRadius = "14px";
-        toast.style.zIndex = "99999";
-        toast.style.fontSize = "14px";
-        toast.style.fontWeight = "600";
-
-        document.body.appendChild(toast);
-    }
-
-    toast.textContent = message;
-    toast.style.display = "block";
-
-    clearTimeout(toast.timer);
-
-    toast.timer = setTimeout(() => {
-        toast.style.display = "none";
-    }, 2500);
-}
-
-function formatTime(dateString) {
-    const date = new Date(dateString);
-
-    return date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit"
-    });
-}
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-
-    return date.toLocaleDateString();
-}
-
-function generateAvatar(name = "") {
-    return `https://ui-avatars.com/api/?background=2563eb&color=fff&name=${encodeURIComponent(name)}`;
-}
-
-function setupInstallPrompt() {
-
-    window.addEventListener("beforeinstallprompt", (e) => {
-
-        e.preventDefault();
-
-        APP.installPrompt = e;
-
-        const installBtn = document.getElementById("install-app");
-
-        if (installBtn) {
-            installBtn.classList.remove("hidden");
-
-            installBtn.addEventListener("click", async () => {
-
-                if (!APP.installPrompt) return;
-
-                APP.installPrompt.prompt();
-
-                await APP.installPrompt.userChoice;
-
-                APP.installPrompt = null;
-            });
+        // If on public page but logged in, redirect to chats
+        if (isPublic && APP.user) {
+            if (page === "login.html" || page === "register.html") {
+                console.log("Redirecting logged-in user to chats");
+                window.location.replace("chats.html");
+                return;
+            }
+            return;
         }
-    });
+
+        // If on private page but not logged in, redirect to login
+        if (!isPublic && !APP.user) {
+            console.log("Redirecting unauthenticated user to login");
+            window.location.replace("login.html");
+            return;
+        }
+
+        // If on login page with no session, that's fine
+        if (page === "login.html" || page === "register.html") {
+            return;
+        }
+
+        // For other pages, verify session is valid
+        if (!isPublic && APP.user) {
+            try {
+                // Verify session is still valid
+                if (APP.supabase) {
+                    const { data, error } = await APP.supabase.auth.getUser();
+                    if (error || !data?.user) {
+                        console.warn("Session expired or invalid");
+                        APP.user = null;
+                        APP.session = null;
+                        window.location.replace("login.html");
+                    }
+                }
+            } catch (error) {
+                console.error("Session validation failed:", error);
+            }
+        }
+
+    } catch (error) {
+        console.error("Route protection failed:", error);
+    }
 }
 
-async function registerServiceWorker() {
+// Get current page name
+function getCurrentPage() {
+    try {
+        const path = window.location.pathname;
+        const filename = path.split("/").pop() || "index.html";
+        return filename;
+    } catch (error) {
+        console.warn("Failed to get current page:", error);
+        return "index.html";
+    }
+}
 
-    if (!("serviceWorker" in navigator)) return;
+// Logout function
+async function logout() {
+    try {
+        // Show loading state
+        const logoutButtons = document.querySelectorAll("[data-logout]");
+        logoutButtons.forEach(btn => {
+            btn.disabled = true;
+            btn.textContent = "Logging out...";
+        });
+
+        // Sign out from Supabase
+        if (APP.supabase) {
+            try {
+                await APP.supabase.auth.signOut();
+            } catch (error) {
+                console.error("Supabase signout failed:", error);
+                // Continue with local cleanup even if remote signout fails
+            }
+        }
+
+        // Clear local state
+        APP.user = null;
+        APP.session = null;
+        APP.profile = null;
+
+        // Clear localStorage items except theme/preferences
+        const keepKeys = ['theme', 'preferences'];
+        const keysToRemove = [];
+        
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && !keepKeys.includes(key)) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // Clear session storage
+        try {
+            sessionStorage.clear();
+        } catch (error) {
+            console.warn("SessionStorage clear failed:", error);
+        }
+
+        // Redirect to login
+        window.location.href = "login.html";
+
+    } catch (error) {
+        console.error("Logout failed:", error);
+        showToast("Logout failed. Please try again.");
+        
+        // Re-enable buttons
+        const logoutButtons = document.querySelectorAll("[data-logout]");
+        logoutButtons.forEach(btn => {
+            btn.disabled = false;
+            btn.textContent = "Logout";
+        });
+    }
+}
+
+// Setup logout buttons
+function setupLogoutButtons() {
+    try {
+        const buttons = document.querySelectorAll("[data-logout]");
+        if (buttons.length === 0) return;
+
+        buttons.forEach(btn => {
+            // Remove existing listener to avoid duplicates
+            btn.removeEventListener("click", logout);
+            btn.addEventListener("click", async (e) => {
+                e.preventDefault();
+                await logout();
+            });
+        });
+    } catch (error) {
+        console.warn("Failed to setup logout buttons:", error);
+    }
+}
+
+// Show toast notification
+function showToast(message = "", duration = 3000) {
+    if (!message) return;
 
     try {
+        let toast = document.getElementById("tego-toast");
 
-        await navigator.serviceWorker.register("sw.js");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "tego-toast";
+            
+            // Apply styles
+            Object.assign(toast.style, {
+                position: "fixed",
+                bottom: "100px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                background: "#2563eb",
+                color: "#fff",
+                padding: "12px 18px",
+                borderRadius: "14px",
+                zIndex: "99999",
+                fontSize: "14px",
+                fontWeight: "600",
+                maxWidth: "90%",
+                textAlign: "center",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                opacity: "0",
+                transition: "opacity 0.3s ease",
+                pointerEvents: "none"
+            });
 
-    } catch (err) {
+            document.body.appendChild(toast);
+        }
 
-        console.error(err);
+        toast.textContent = message;
+        toast.style.display = "block";
+        toast.style.opacity = "1";
 
+        // Clear existing timer
+        if (toast.timer) {
+            clearTimeout(toast.timer);
+        }
+
+        // Hide after duration
+        toast.timer = setTimeout(() => {
+            toast.style.opacity = "0";
+            setTimeout(() => {
+                toast.style.display = "none";
+            }, 300);
+        }, duration);
+
+    } catch (error) {
+        console.warn("Toast display failed:", error);
+        // Fallback to alert if toast fails
+        if (message) alert(message);
     }
 }
 
+// Format time
+function formatTime(dateString) {
+    if (!dateString) return "";
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "";
+        
+        return date.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    } catch (error) {
+        console.warn("Time formatting failed:", error);
+        return "";
+    }
+}
+
+// Format date
+function formatDate(dateString) {
+    if (!dateString) return "";
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "";
+        
+        return date.toLocaleDateString();
+    } catch (error) {
+        console.warn("Date formatting failed:", error);
+        return "";
+    }
+}
+
+// Generate avatar URL
+function generateAvatar(name = "") {
+    if (!name) {
+        name = "User";
+    }
+    
+    try {
+        return `https://ui-avatars.com/api/?background=2563eb&color=fff&name=${encodeURIComponent(name)}`;
+    } catch (error) {
+        console.warn("Avatar generation failed:", error);
+        return `https://ui-avatars.com/api/?background=2563eb&color=fff&name=User`;
+    }
+}
+
+// Setup install prompt
+function setupInstallPrompt() {
+    try {
+        window.addEventListener("beforeinstallprompt", (e) => {
+            e.preventDefault();
+            APP.installPrompt = e;
+
+            const installBtn = document.getElementById("install-app");
+            if (installBtn) {
+                installBtn.classList.remove("hidden");
+                
+                // Remove existing listeners to avoid duplicates
+                const newBtn = installBtn.cloneNode(true);
+                installBtn.parentNode.replaceChild(newBtn, installBtn);
+                
+                newBtn.addEventListener("click", async () => {
+                    if (!APP.installPrompt) {
+                        showToast("Installation not available");
+                        return;
+                    }
+
+                    try {
+                        const result = await APP.installPrompt.prompt();
+                        console.log("Install prompt result:", result);
+                        
+                        if (result && result.outcome === "accepted") {
+                            showToast("App installed successfully!");
+                        }
+                        
+                        APP.installPrompt = null;
+                    } catch (error) {
+                        console.error("Install prompt failed:", error);
+                        showToast("Installation failed");
+                        APP.installPrompt = null;
+                    }
+                });
+            }
+        });
+
+        // Handle successful installation
+        window.addEventListener("appinstalled", () => {
+            console.log("App installed");
+            showToast("Thank you for installing!");
+            APP.installPrompt = null;
+        });
+
+    } catch (error) {
+        console.warn("Install prompt setup failed:", error);
+    }
+}
+
+// Register service worker
+async function registerServiceWorker() {
+    try {
+        if (!("serviceWorker" in navigator)) {
+            console.log("Service workers not supported");
+            return;
+        }
+
+        // Check if sw.js exists before registering
+        try {
+            const response = await fetch("sw.js", { method: "HEAD" });
+            if (!response.ok) {
+                console.warn("sw.js not found, skipping registration");
+                return;
+            }
+        } catch (error) {
+            console.warn("sw.js not accessible:", error);
+            return;
+        }
+
+        const registration = await navigator.serviceWorker.register("sw.js");
+        console.log("Service worker registered:", registration.scope);
+
+        // Check for updates
+        registration.addEventListener("updatefound", () => {
+            console.log("Service worker update found");
+        });
+
+    } catch (error) {
+        console.warn("Service worker registration failed:", error);
+    }
+}
+
+// Get user profile
 async function getProfile() {
+    if (!APP.user) {
+        console.warn("Cannot get profile: No user logged in");
+        return null;
+    }
 
-    if (!APP.user) return null;
+    if (!APP.supabase) {
+        console.warn("Cannot get profile: Supabase not initialized");
+        return null;
+    }
 
-    const {
-        data,
-        error
-    } = await APP.supabase
-        .from("profiles")
-        .select("*")
-        .eq("auth_id", APP.user.id)
-        .single();
+    try {
+        const { data, error } = await APP.supabase
+            .from("profiles")
+            .select("*")
+            .eq("auth_id", APP.user.id)
+            .single();
 
-    if (error) return null;
+        if (error) {
+            if (error.code === "PGRST116") {
+                // No profile found - that's ok
+                console.log("No profile found for user");
+                APP.profile = null;
+                return null;
+            }
+            console.warn("Profile fetch error:", error);
+            return null;
+        }
 
-    APP.profile = data;
+        APP.profile = data;
+        return data;
 
-    return data;
-}function openChat(chat) {
+    } catch (error) {
+        console.error("Failed to get profile:", error);
+        return null;
+    }
+}
 
-    localStorage.setItem(
-        "activeChat",
-        JSON.stringify(chat)
-    );
+// Navigation functions
+function openChat(chat) {
+    if (!chat) {
+        console.warn("No chat data provided");
+        return;
+    }
 
-    window.location.href =
-    "chat.html";
-
+    try {
+        localStorage.setItem("activeChat", JSON.stringify(chat));
+        window.location.href = "chat.html";
+    } catch (error) {
+        console.error("Failed to open chat:", error);
+        showToast("Failed to open chat");
+    }
 }
 
 function openProfile() {
@@ -231,47 +510,40 @@ function openChats() {
 function openSettings() {
     window.location.href = "settings.html";
 }
+
+// Get active chat from localStorage
 function getActiveChat() {
+    try {
+        const data = localStorage.getItem("activeChat");
+        if (!data) return null;
 
-    const data =
-    localStorage.getItem(
-        "activeChat"
-    );
-
-    if (!data) {
+        return JSON.parse(data);
+    } catch (error) {
+        console.warn("Failed to parse active chat:", error);
         return null;
+    }
+}
+
+// Save active chat to localStorage
+function saveActiveChat(contact) {
+    if (!contact) {
+        console.warn("No contact provided to save");
+        return;
     }
 
     try {
-
-        return JSON.parse(
-            data
-        );
-
-    } catch {
-
-        return null;
-
+        localStorage.setItem("activeChat", JSON.stringify(contact));
+    } catch (error) {
+        console.error("Failed to save active chat:", error);
     }
-
-}
-function saveActiveChat(
-    contact
-) {
-
-    localStorage.setItem(
-        "activeChat",
-        JSON.stringify(
-            contact
-        )
-    );
-
 }
 
-window.saveActiveChat =
-saveActiveChat;
-window.getActiveChat =
-getActiveChat;
+// Check if user is authenticated
+function isAuthenticated() {
+    return !!(APP.user && APP.session);
+}
+
+// Export for global access
 window.APP = APP;
 window.logout = logout;
 window.showToast = showToast;
@@ -284,3 +556,9 @@ window.openProfile = openProfile;
 window.openContacts = openContacts;
 window.openChats = openChats;
 window.openSettings = openSettings;
+window.getActiveChat = getActiveChat;
+window.saveActiveChat = saveActiveChat;
+window.isAuthenticated = isAuthenticated;
+window.initializeApp = initializeApp;
+
+console.log("App module loaded");
