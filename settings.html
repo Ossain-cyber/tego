@@ -19,178 +19,129 @@
 <div class="app">
 
 <header class="topbar">
-
-<div class="topbar-title">
-Settings
-</div>
-
+  <div class="topbar-title">
+    Settings
+  </div>
 </header>
 
 <div class="container">
-<div class="card">
-
-    <h3>About Tego</h3>
-
-    <div class="subtext">
-        Tego Messenger v1.0.0
-    </div>
-
-    <div class="subtext">
-        Support: rabbibrandsend@gmail.com
-    </div>
-
-    <div class="subtext">
-        WhatsApp: +234 905 856 2478
-    </div>
-
-    <div class="subtext">
-        Built by Hussain
-    </div>
-
-</div>
-
-<div class="card">
-
-    <button
-    id="install-app"
-    class="btn hidden"
+  
+  <!-- Profile Card -->
+  <div class="card profile-card">
+    <img
+      id="avatar"
+      src="icon-192.png"
+      class="avatar-xl"
+      alt="Avatar"
     >
-        Install Tego
-    </button>
-
-</div>
-
-<div class="card">
-
-    <button
-    onclick="logout()"
-    class="danger-btn"
+    <h2 id="display-name">
+      Loading...
+    </h2>
+    <p id="username">
+      @username
+    </p>
+    <div
+      id="tego-id"
+      class="readonly-box"
     >
-        Logout
-    </button>
-
+      TEGO-ID
+    </div>
   </div>
-<div class="card profile-card">
 
-<img
-id="avatar"
-src="icon-192.png"
-class="avatar-xl"
-alt="Avatar"
->
+  <!-- About Section -->
+  <div class="card">
+    <h3>About Tego</h3>
+    <div class="subtext">
+      Tego Messenger v1.0.0
+    </div>
+    <div class="subtext">
+      Support: rabbibrandsend@gmail.com
+    </div>
+    <div class="subtext">
+      WhatsApp: +234 905 856 2478
+    </div>
+    <div class="subtext">
+      Built by Hussain
+    </div>
+    <p style="margin-top: 10px;">
+      Fast messaging powered by Supabase realtime.
+    </p>
+  </div>
 
-<h2 id="display-name">
-Loading...
-</h2>
+  <!-- Action Buttons -->
+  <div class="card">
+    <button
+      id="install-app"
+      class="btn hidden"
+    >
+      Install Tego
+    </button>
 
-<p id="username">
-@username
-</p>
+    <button
+      id="edit-profile"
+      class="btn"
+    >
+      Edit Profile
+    </button>
 
-<div
-id="tego-id"
-class="readonly-box"
->
-TEGO-ID
-</div>
+    <button
+      id="clear-cache"
+      class="btn"
+    >
+      Clear Cache
+    </button>
 
-</div>
-
-<div class="card">
-
-<button
-id="edit-profile"
-class="btn"
->
-Edit Profile
-</button>
-
-<button
-id="install-app"
-class="btn hidden"
->
-Install App
-</button>
-
-<button
-id="clear-cache"
-class="btn"
->
-Clear Cache
-</button>
-
-<button
-id="logout-btn"
-class="btn danger"
->
-Logout
-</button>
-
-</div>
-
-<div class="card">
-
-<h3>
-About Tego
-</h3>
-
-<p>
-Fast messaging powered by Supabase realtime.
-</p>
-
-</div>
+    <button
+      id="logout-btn"
+      class="btn danger"
+      onclick="logout()"
+    >
+      Logout
+    </button>
+  </div>
 
 </div>
 
 <nav class="bottom-nav">
+  <button
+    onclick="openChats()"
+    class="nav-btn"
+  >
+    Chats
+  </button>
 
-<button
-onclick="openChats()"
-class="nav-btn"
->
-Chats
-</button>
+  <button
+    onclick="openContacts()"
+    class="nav-btn"
+  >
+    Contacts
+  </button>
 
-<button
-onclick="openContacts()"
-class="nav-btn"
->
-Contacts
-</button>
+  <button
+    onclick="openProfile()"
+    class="nav-btn"
+  >
+    Profile
+  </button>
 
-<button
-onclick="openProfile()"
-class="nav-btn"
->
-Profile
-</button>
-
-<button
-onclick="openSettings()"
-class="nav-btn active"
->
-Settings
-</button>
-
+  <button
+    onclick="openSettings()"
+    class="nav-btn active"
+  >
+    Settings
+  </button>
 </nav>
 
 </div>
 
 <script>
 document.addEventListener(
-"DOMContentLoaded",
-async () => {
-
-if (
-typeof initSettingsPage ===
-"function"
-) {
-
-await initSettingsPage();
-
-}
-
-}
+  "DOMContentLoaded",
+  async () => {
+    if (typeof initSettingsPage === "function") {
+      await initSettingsPage();
+    }
+  }
 );
 </script>
 
