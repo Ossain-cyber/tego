@@ -1,14 +1,17 @@
 // App state - initialized with defaults
 const APP = {
-    supabase: null,
-    session: null,
-    user: null,
-    profile: null,
-    installPrompt: null,
-    initialized: false,
-    initError: null,
-    isRedirecting: false
-};
+const APP = window.APP || {};
+
+APP.supabase = APP.supabase || null;
+APP.session = APP.session || null;
+APP.user = APP.user || null;
+APP.profile = APP.profile || null;
+APP.installPrompt = null;
+APP.initialized = false;
+APP.initError = null;
+APP.isRedirecting = false;
+
+window.APP = APP;
 
 // Wait for DOM and initialize
 document.addEventListener("DOMContentLoaded", async () => {
@@ -83,6 +86,8 @@ async function initializeSupabase() {
 
             APP.session = data?.session || null;
             APP.user = data?.session?.user || null;
+            console.log("Session:", APP.session);
+console.log("User:", APP.user);
 
             // Update user if session exists
             if (APP.user) {
