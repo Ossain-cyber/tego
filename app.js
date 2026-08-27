@@ -1,8 +1,16 @@
-// App state - initialized with defaults
-const APP = {
+// App state
 const APP = window.APP || {};
 
 APP.supabase = APP.supabase || null;
+APP.session = APP.session || null;
+APP.user = APP.user || null;
+APP.profile = APP.profile || null;
+APP.installPrompt = null;
+APP.initialized = false;
+APP.initError = null;
+APP.isRedirecting = false;
+
+window.APP = APP;
 APP.session = APP.session || null;
 APP.user = APP.user || null;
 APP.profile = APP.profile || null;
@@ -680,3 +688,10 @@ window.ensureProfile = ensureProfile;
 window.saveActiveChat = saveActiveChat;
 window.getActiveChat = getActiveChat;
 window.clearActiveChat = clearActiveChat;
+window.openChat = openChat;
+window.openProfile = openProfile;
+window.openContacts = openContacts;
+window.openChats = openChats;
+window.openSettings = openSettings;
+window.logout = logout;
+
