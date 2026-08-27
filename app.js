@@ -65,7 +65,7 @@ async function registerServiceWorker() {
 
         if (!response.ok) return;
 
-        await navigator.serviceWorker.register("sw.js");
+        await navigator.serviceWorker.register("./sw.js?v=2");
 
     } catch (error) {
         console.warn("Service worker unavailable:", error);
