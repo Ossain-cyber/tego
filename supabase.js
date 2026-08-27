@@ -901,7 +901,7 @@ if (typeof window !== 'undefined') {
     // Auth
     window.signUp = signUp;
     window.signIn = signIn;
-    window.signOutUser = signOutUser;
+    
     window.logoutUser = signOutUser; // Alias
     window.getCurrentUser = getCurrentUser;
     window.getCurrentSession = getCurrentSession;
