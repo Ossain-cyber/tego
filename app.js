@@ -113,25 +113,7 @@ console.log("User:", APP.user);
 
 // Route protection - SIMPLIFIED FIXED VERSION
 async function protectRoutes() {
-    const page = getCurrentPage();
-    const publicPages = ["index.html", "login.html", "register.html", ""];
-    const isPublic = publicPages.includes(page);
-
-    // If on private page but not logged in, redirect to login
-    if (!isPublic && !APP.user) {
-        console.log("Redirecting unauthenticated user to login");
-        window.location.replace("login.html");
-        return;
-    }
-
-    // If on public page but logged in, redirect to chats
-    if (isPublic && APP.user) {
-        if (page === "login.html" || page === "register.html") {
-            console.log("Redirecting logged-in user to chats");
-            window.location.replace("chats.html");
-            return;
-        }
-    }
+    return;
 }
 
 // Get current page name
