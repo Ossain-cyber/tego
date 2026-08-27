@@ -66,13 +66,19 @@ function getCurrentPage() {
 }
 
 async function logout() {
-    if (!APP.supabase) return;
+    try {
+        if (APP.supabase) {
+            await APP.supabase.auth.signOut();
+        }
 
-    await APP.supabase.auth.signOut();
+        localStorage.clear();
+        sessionStorage.clear();
 
-    localStorage.clear();
-
-    window.location.replace("login.html");
+        window.location.replace("login.html");
+    } catch (error) {
+        console.error(error);
+        window.location.replace("login.html");
+    }
 }
 
 function setupLogoutButtons() {
