@@ -889,12 +889,7 @@ async function initAuth() {
     }
 }
 
-// Auto-initialize only after DOM is ready
-if (typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initAuth().catch(console.warn);
-    });
-}
+
 
 // Export to global scope - check if window exists first
 if (typeof window !== 'undefined') {
