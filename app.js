@@ -67,17 +67,15 @@ function getCurrentPage() {
 
 async function logout() {
     try {
-        if (APP.supabase) {
-            await APP.supabase.auth.signOut();
-        }
+        await APP.supabase.auth.signOut();
 
         localStorage.clear();
         sessionStorage.clear();
 
-        window.location.replace("login.html");
-    } catch (error) {
-        console.error(error);
-        window.location.replace("login.html");
+        window.location.href = "login.html";
+    } catch (err) {
+        console.error(err);
+        showToast("Logout failed");
     }
 }
 
